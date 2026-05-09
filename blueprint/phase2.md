@@ -30,7 +30,8 @@ Scoring dimensions:
 </project_context>
 
 <existing_code>
-[PASTE your shared/ and task_a/ scaffold from Phase 1 here]
+C:\Users\DanielsFega\Hackathons\bcthack\shared
+C:\Users\DanielsFega\Hackathons\bcthack\task_a
 </existing_code>
 
 <task>
