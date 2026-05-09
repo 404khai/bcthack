@@ -34,7 +34,8 @@ Multi-turn: maintain conversation history in memory (dict keyed by session_id).
 </project_context>
 
 <existing_code>
-[PASTE your shared/ and task_b/ scaffold here]
+C:\Users\DanielsFega\Hackathons\bcthack\shared
+C:\Users\DanielsFega\Hackathons\bcthack\task_b
 </existing_code>
 
 <task>
