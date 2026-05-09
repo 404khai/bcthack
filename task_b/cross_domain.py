@@ -1,37 +1,91 @@
-"""Cross-domain preference bridge for Task B."""
+
+"""Cross-domain preference transfer for Task B."""
 
 from __future__ import annotations
 
-from task_b.schemas import RecommendRequest, RecommendationItem
+import json
+from os import getenv
+
+from shared.llm_client import AnthropicLLMClient
+
+PreferenceMap = dict[str, float]
+
+CLAUDE_MODEL_NAME = "claude-sonnet-4-20250514"
+SYSTEM_PROMPT = """You infer cross-domain preference transfers for recommendations.
+
+Return only valid JSON in the form:
+{"attribute": weight}
+
+Weights should be floats between 0.0 and 1.0.
+"""
+USER_PROMPT_TEMPLATE = """Source reviews:
+{source_reviews}
+
+Target domain:
+{target_domain}
+
+Infer which target-domain preferences logically transfer from the source reviews.
+"""
+DOMAIN_BRIDGES = {
+    "goodreads:movies": {"intense storytelling": 0.8, "nollywood crime drama": 0.72},
+    "goodreads:food": {"bold flavors": 0.76, "spicy dishes": 0.7},
+    "books:food": {"immersive ambience": 0.62, "complex flavors": 0.68},
+    "books:entertainment": {"character depth": 0.74, "slow-burn tension": 0.69},
+}
 
 
 class CrossDomainBridge:
-    def expand_candidates(
-        self,
-        request: RecommendRequest,
-        candidates: list[RecommendationItem],
-    ) -> list[RecommendationItem]:
-        if not request.enable_cross_domain:
-            return candidates
+    """Infers target-domain preferences from another domain using Claude or heuristics."""
 
-        expanded = list(candidates)
-        bridge_map = {
-            "historical fiction": "cultural dining",
-            "self-help": "productivity tools",
-            "electronics": "smart accessories",
-            "restaurant": "local experiences",
-        }
-        for item in candidates:
-            mapped = bridge_map.get(item.category.lower())
-            if mapped and len(expanded) < request.top_k + len(candidates):
-                expanded.append(
-                    RecommendationItem(
-                        item_id=f"bridge-{item.item_id}",
-                        title=f"Cross-domain pick inspired by {item.title}",
-                        category=mapped,
-                        score=max(0.4, item.score - 0.1),
-                        explanation="Added through cross-domain preference transfer from the user's adjacent interests.",
-                        source="cross_domain",
-                    )
+    def __init__(self, llm_client: AnthropicLLMClient | None = None) -> None:
+        self._llm_client = llm_client
+
+    async def infer_cross_domain_preferences(
+        self,
+        source_reviews: list[str],
+        target_domain: str,
+    ) -> PreferenceMap:
+        """Builds a weighted preference map for a new domain from source reviews."""
+        if not source_reviews:
+            return {}
+
+        client = self._get_llm_client()
+        if client is not None:
+            try:
+                response = await client.generate_text(
+                    system_prompt=SYSTEM_PROMPT,
+                    user_prompt=USER_PROMPT_TEMPLATE.format(
+                        source_reviews="\n".join(f"- {review}" for review in source_reviews[:8]),
+                        target_domain=target_domain,
+                    ),
+                    max_tokens=220,
+                    temperature=0.35,
                 )
-        return expanded
+                parsed = json.loads(response)
+                if isinstance(parsed, dict):
+                    return {
+                        str(key): max(0.0, min(1.0, float(value)))
+                        for key, value in parsed.items()
+                    }
+            except Exception:
+                pass
+
+        lowered_reviews = " ".join(source_reviews).lower()
+        inferred: PreferenceMap = {}
+        if "thriller" in lowered_reviews or "dark" in lowered_reviews:
+            inferred["intense tone"] = 0.82
+        if "history" in lowered_reviews or "literary" in lowered_reviews:
+            inferred["cultural depth"] = 0.74
+        if "productivity" in lowered_reviews or "self-help" in lowered_reviews:
+            inferred["practical value"] = 0.71
+        domain_key = f"goodreads:{target_domain.lower()}"
+        inferred.update(DOMAIN_BRIDGES.get(domain_key, {}))
+        return inferred
+
+    def _get_llm_client(self) -> AnthropicLLMClient | None:
+        if self._llm_client is not None:
+            return self._llm_client
+        if not getenv("ANTHROPIC_API_KEY"):
+            return None
+        self._llm_client = AnthropicLLMClient(model=CLAUDE_MODEL_NAME)
+        return self._llm_client

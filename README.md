@@ -1,11 +1,12 @@
+
 # BCT Hackathon LLM Agents
 
-This repository contains the Phase 1 scaffold for a DSN x BCT hackathon submission. It is organized as two FastAPI microservices backed by shared LLM, embedding, and retrieval utilities.
+This repository contains the evolving hackathon implementation for a DSN x BCT submission. It is organized as two FastAPI microservices backed by shared LLM, embedding, retrieval, and vector-store utilities.
 
 ## Services
 
 - `task_a`: user modeling service that generates simulated reviews and star ratings.
-- `task_b`: recommendation service that returns ranked recommendations with reasoning and explanations.
+- `task_b`: recommendation service that reasons before retrieval and returns ranked recommendations with explanations.
 - `shared`: common infrastructure for Anthropic access, ChromaDB, embeddings, user profile modeling, and Nigerian contextualization.
 - `data`: dataset processors and ingestion utilities for Yelp, Amazon Reviews, and Goodreads subsets.
 - `eval`: lightweight evaluation entrypoints for both tasks.
@@ -33,14 +34,14 @@ The ingestion pipeline reads newline-delimited JSON examples from `data/sample/`
 python -m data.ingest --use-sample-data
 ```
 
-## Phase 1 scope
+## Current scope
 
-Phase 1 delivers:
+The repository now includes:
 
-- the project scaffold and package boundaries,
-- Docker and compose orchestration,
-- shared embedding, LLM, and vector store abstractions,
-- dataset processors and a master ingestion command,
-- Task A and Task B FastAPI service stubs with `/health` endpoints.
+- Phase 1 scaffold, Docker orchestration, and shared infrastructure.
+- Phase 2 Task A persona analysis, review generation, rating prediction, and evaluation utilities.
+- Phase 3 Task B reasoning-first recommendation flow, multi-source retrieval, cold-start handling, cross-domain inference, reranking, and chat endpoints.
 
-Subsequent phases will fill in richer review generation, retrieval reasoning, multi-turn conversation, and evaluation detail.
+## Task B session note
+
+Task B conversation state is stored in memory for hackathon speed and simplicity. Session history is keyed by `session_id`, survives only for the lifetime of the running process, and is not yet backed by Redis or a database.
