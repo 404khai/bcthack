@@ -1,0 +1,135 @@
+# .dockerignore for BCT Hackathon project
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.python-version
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Evaluation results
+eval/*.json
+eval/*.csv
+eval/*.txt
+
+# Test files
+test/
+tests/
+*.test.py
+*_test.py
+
+# Jupyter
+.ipynb_checkpoints
+
+# Documentation
+docs/
+*.md
+!README.md
+README.md
+CONTRIBUTING.md
+CHANGELOG.md
+LICENSE # Docker
+Dockerfile*
+docker-compose*
+.dockerignore  
+
+# Test and coverage
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/    
+docs/_build/
+
+# Dataset files (large)
+data/*.json
+!data/sample/
+!data/sample/test_fixtures/
+
+# ChromaDB data
+chroma_data/
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+
+# Docker files
+docker-compose.override.yml
+
+# Makefile
+Makefile
+
+# Blueprint files
+blueprint/
+
+# Data directories (except sample test fixtures)
+data/
+!data/sample/test_fixtures/
+
+# ChromaDB data
+chroma_data/
+
+# Evaluation results
+eval/eval_results_*.json
+eval/eval_results_*.csv
+eval/task_*_summary.txt

@@ -1,0 +1,55 @@
+# .dockerignore for Task A User Modeling Service
+# Service-specific ignores
+
+# Task B files
+../task_b/
+
+# Evaluation files
+../eval/
+
+# Dataset processors (except for shared)
+../data/
+
+# Blueprint files
+../blueprint/
+
+# ChromaDB data
+../chroma_data/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Cache files
+.cache/
+.cache.*
+
+# Development files
+*.dev.*
+*.test.*
+*.spec.* # Backup files
+*.bak
+*.backup
+
+# Temporary files
+*.tmp
+*.temp
+
+# Environment files
+.env
+.env.*
+
+# Test files
+test/
+tests/
+*.test.py
+*_test.py
+
+# Logs
+*.log
+*.log.*
+
+# OS files
+.DS_Store
+Thumbs.db

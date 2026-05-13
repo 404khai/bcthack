@@ -1,52 +1,96 @@
 version: "3.9"
 
 services:
+  chromadb:
+    image: chromadb/chroma:0.5.23
+    container_name: bcthack_chromadb
+    environment:
+      - IS_PERSISTENT=TRUE
+      - PERSIST_DIRECTORY=/chroma_data
+      - ANONYMIZED_TELEMETRY=FALSE
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./chroma_data:/chroma_data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    networks:
+      - bcthack_network
+
   task_a:
     build:
       context: .
       dockerfile: task_a/Dockerfile
+      target: runtime
+    container_name: bcthack_task_a
     env_file:
       - .env
     environment:
       PYTHONPATH: /app
-      CHROMA_PERSIST_DIR: /app/chroma_db
+      CHROMA_HOST: chromadb
+      CHROMA_PORT: 8000
+      CHROMA_PERSIST_DIR: /app/chroma_data
       DATA_DIR: /app/data
       SERVICE_PORT: 8001
     command: uvicorn task_a.main:app --host 0.0.0.0 --port 8001
     ports:
       - "8001:8001"
     volumes:
-      - .:/app
+      - ./shared:/app/shared
+      - ./task_a:/app/task_a
       - ./data:/app/data
-      - ./chroma_db:/app/chroma_db
+      - ./chroma_data:/app/chroma_data
+    depends_on:
+      chromadb:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health')"]
       interval: 30s
       timeout: 5s
       retries: 5
       start_period: 20s
+    networks:
+      - bcthack_network
 
   task_b:
     build:
       context: .
       dockerfile: task_b/Dockerfile
+      target: runtime
+    container_name: bcthack_task_b
     env_file:
       - .env
     environment:
       PYTHONPATH: /app
-      CHROMA_PERSIST_DIR: /app/chroma_db
+      CHROMA_HOST: chromadb
+      CHROMA_PORT: 8000
+      CHROMA_PERSIST_DIR: /app/chroma_data
       DATA_DIR: /app/data
       SERVICE_PORT: 8002
     command: uvicorn task_b.main:app --host 0.0.0.0 --port 8002
     ports:
       - "8002:8002"
     volumes:
-      - .:/app
+      - ./shared:/app/shared
+      - ./task_b:/app/task_b
       - ./data:/app/data
-      - ./chroma_db:/app/chroma_db
+      - ./chroma_data:/app/chroma_data
+    depends_on:
+      chromadb:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8002/health')"]
       interval: 30s
       timeout: 5s
       retries: 5
       start_period: 20s
+    networks:
+      - bcthack_network
+
+networks:
+  bcthack_network:
+    driver: bridge

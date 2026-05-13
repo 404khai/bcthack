@@ -1,0 +1,57 @@
+# .dockerignore for Task B Recommendation Service
+# Service-specific ignores
+
+# Exclude other services
+../task_a/
+
+# Evaluation files
+../eval/
+
+# Dataset processors (except for shared)
+../data/
+
+# Blueprint files
+../blueprint/
+
+# ChromaDB data
+../chroma_data/
+
+# Development files
+*.dev.*
+*.test.*
+*.spec.*
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment files
+.env
+.env.*
+
+# Test files
+test/
+tests/
+*.test.py
+*_test.py
+
+# Logs
+*.log
+*.log.*
+
+# Backup files
+*.bak
+*.backup
+
+# Temporary files
+*.tmp
+*.temp
+
+# Cache files
+.cache/
+.cache.*
+
+# OS files
+.DS_Store
+Thumbs.db
