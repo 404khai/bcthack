@@ -4,9 +4,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
-from collections import defaultdict
-from dataclasses import asdict
 from os import getenv
 from pathlib import Path
 from typing import Any
@@ -61,20 +58,6 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def deduplicate_items(items: list[Any]) -> list[Any]:
-    """Deduplicates items by their ID across platforms."""
-    seen_ids = set()
-    deduplicated = []
-    
-    for item in items:
-        item_id = getattr(item, "item_id", None)
-        if item_id and item_id not in seen_ids:
-            seen_ids.add(item_id)
-            deduplicated.append(item)
-            
-    return deduplicated
-
-
 def build_user_document(user: UserProfile) -> str:
     """Builds a searchable document summary for vector storage."""
     categories = ", ".join(user.preferred_categories) or "mixed interests"
@@ -110,6 +93,12 @@ def build_review_document(review: ReviewRecord) -> str:
     return review.review_text
 
 
+def ensure_platform_prefix(platform: str, value: str) -> str:
+    """Prefixes an identifier only once with its platform namespace."""
+    prefix = f"{platform}_"
+    return value if value.startswith(prefix) else f"{prefix}{value}"
+
+
 def process_dataset(
     platform: str,
     processor: Any,
@@ -128,18 +117,11 @@ def process_dataset(
     print(f"\nProcessing {platform} dataset...")
     
     try:
-        # Load data from processor
-        users, items, reviews = processor.load_all()
-        
-        # Apply sample-only limit if requested
-        if sample_only and users:
-            users = users[:100]
-            # Filter items and reviews to match sampled users
-            sampled_user_ids = {user.user_id for user in users}
-            reviews = [r for r in reviews if r.metadata.get("user_id") in sampled_user_ids]
-            # Keep items referenced by sampled reviews
-            sampled_item_ids = {r.item_id for r in reviews}
-            items = [i for i in items if i.item_id in sampled_item_ids]
+        # Processors own sampling decisions so users/items/reviews stay aligned.
+        if hasattr(processor, "process"):
+            users, items, reviews = processor.process(sample_only=sample_only)
+        else:
+            users, items, reviews = processor.load_all()
             
         if not users:
             print(f"No users found for {platform}")
@@ -148,7 +130,7 @@ def process_dataset(
         print(f"  Found {len(users)} users, {len(items)} items, {len(reviews)} reviews")
         
         # Prepare data for ChromaDB
-        user_ids = [f"{platform}_{user.user_id}" for user in users]
+        user_ids = [ensure_platform_prefix(platform, user.user_id) for user in users]
         user_docs = [build_user_document(user) for user in users]
         user_metadatas = []
         
@@ -180,7 +162,7 @@ def process_dataset(
             )
             
         # Prepare items
-        item_ids = [f"{platform}_{item.item_id}" for item in items]
+        item_ids = [ensure_platform_prefix(platform, item.item_id) for item in items]
         item_docs = [build_item_document(item) for item in items]
         item_metadatas = []
         
@@ -194,6 +176,8 @@ def process_dataset(
             item_metadatas.append(metadata)
             
         # Batch insert items
+        print("  Creating items collection...")
+        store.get_collection("items")
         print(f"  Inserting {len(items)} items into ChromaDB...")
         for i in tqdm(range(0, len(items), batch_size), desc="Items"):
             batch_ids = item_ids[i:i+batch_size]
@@ -218,7 +202,7 @@ def process_dataset(
         for user in users:
             # Training reviews
             for review in user.review_history:
-                review_ids.append(f"{platform}_{review.review_id}")
+                review_ids.append(ensure_platform_prefix(platform, review.review_id))
                 review_docs.append(build_review_document(review))
                 review_metadatas.append({
                     "user_id": user.user_id,
@@ -230,7 +214,7 @@ def process_dataset(
                 
             # Test reviews (held out)
             for review in user.held_out_reviews:
-                review_ids.append(f"{platform}_{review.review_id}")
+                review_ids.append(ensure_platform_prefix(platform, review.review_id))
                 review_docs.append(build_review_document(review))
                 review_metadatas.append({
                     "user_id": user.user_id,
@@ -239,7 +223,7 @@ def process_dataset(
                     "platform": platform,
                     "is_test_split": "true",
                 })
-                test_review_ids.append(review.review_id)
+                test_review_ids.append(ensure_platform_prefix(platform, review.review_id))
                 
         # Batch insert reviews
         print(f"  Inserting {len(review_ids)} reviews into ChromaDB...")
@@ -258,10 +242,12 @@ def process_dataset(
             )
             
         # Update split manifest
-        split_manifest[platform] = {
-            "train": [rid for rid in review_ids if not rid.endswith("_true")],
-            "test": test_review_ids,
-        }
+        train_review_ids = [
+            ensure_platform_prefix(platform, review.review_id)
+            for user in users
+            for review in user.review_history
+        ]
+        split_manifest[platform] = {"train": train_review_ids, "test": test_review_ids}
         
         return len(users), len(items), len(review_ids), len(test_review_ids)
         
@@ -298,6 +284,10 @@ def main() -> None:
     print("=" * 60)
     print("Starting ChromaDB Ingestion")
     print("=" * 60)
+
+    # Ensure all core collections exist before ingestion so verification is deterministic.
+    for collection_name in ["users", "items", "reviews"]:
+        store.get_collection(collection_name)
     
     # Process each dataset
     for platform, processor in processors.items():
@@ -343,17 +333,17 @@ def main() -> None:
     print(f"{'TOTAL':<12} {total_users:<8} {total_items:<8} {total_reviews:<10} {total_test:<12}")
     print("=" * 60)
     
-    # List collections
+    # Verify all core collections exist and print counts.
     collections = store.list_collections()
     print(f"\nChromaDB Collections: {', '.join(collections)}")
-    
-    # Verify collections have data
+    print("Verifying collections after ingestion...")
     for collection in ["users", "items", "reviews"]:
-        if collection in collections:
-            count = store.count(collection)
+        exists = collection in collections
+        count = store.count(collection)
+        if exists:
             print(f"  {collection}: {count} documents")
         else:
-            print(f"  {collection}: NOT FOUND")
+            print(f"  {collection}: NOT FOUND (count={count})")
             
     print("\nIngestion completed successfully!")
 
