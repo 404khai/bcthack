@@ -8,46 +8,12 @@ from typing import Any
 
 from shared.llm_client import AnthropicLLMClient
 from shared.nigerian_adapter import NigerianContextAdapter
+from shared.prompts import TASK_A_REVIEW_SYSTEM, TASK_A_REVIEW_USER
 from shared.user_profile import StyleFingerprint, UserProfile
 from shared.vector_store import VectorStore
 from task_a.schemas import ItemDetails
 
 CLAUDE_MODEL_NAME = "claude-sonnet-4-20250514"
-SYSTEM_PROMPT_TEMPLATE = """You are simulating a real user's review style for a recommendation hackathon benchmark.
-
-Match the user's style fingerprint closely:
-- Average review length target: {min_words}-{max_words} words
-- Formality score target: {formality_score}
-- Sentiment distribution: {sentiment_distribution}
-- Vocabulary size target: approximately {vocabulary_size} unique tokens across their corpus
-- Common phrases to echo naturally when appropriate: {top_phrases}
-- Nigerian signals seen historically: {nigerian_signals}
-
-Instructions:
-1. Write a single review in first-person if the examples suggest it.
-2. Match the user's tone, sentence length, and lexical richness.
-3. Reflect the user's historical sentiment balance instead of writing generic praise.
-4. Mention item attributes only when they sound natural in a user review.
-5. If Nigerian mode is enabled, use Nigerian expressions or local references naturally and sparingly.
-6. Do not mention that you are an AI or that you were given style instructions.
-7. Output review text only.
-"""
-USER_PROMPT_TEMPLATE = """User profile summary:
-- User ID: {user_id}
-- Platform: {platform}
-- Preferred categories: {preferred_categories}
-
-Target item:
-- Item ID: {item_id}
-- Name: {item_name}
-- Category: {item_category}
-- Attributes: {item_attributes}
-
-Few-shot context from similar reviews:
-{example_reviews}
-
-Write a realistic user review for the target item.
-"""
 FALLBACK_REVIEW_TEMPLATE = (
     "I tried {item_name} in the {item_category} category and found it {tone}. "
     "{attribute_sentence} {phrase_sentence}{sentiment_sentence}"
@@ -71,13 +37,14 @@ class ReviewGenerator:
         item_details: ItemDetails,
         *,
         nigerian_mode: bool = False,
+        nigerian_intensity: str = "medium",
     ) -> str:
         """Generates a review that mirrors the user's historical writing style."""
         style = user_profile.style_fingerprint
         example_reviews = await self.retrieve_example_reviews(user_profile, item_details.category)
         client = self._get_llm_client()
         if client is not None:
-            system_prompt = SYSTEM_PROMPT_TEMPLATE.format(
+            system_prompt = TASK_A_REVIEW_SYSTEM.format(
                 min_words=max(20, int(style.avg_review_length * 0.8)),
                 max_words=max(30, int(style.avg_review_length * 1.2)),
                 formality_score=f"{style.formality_score:.2f}",
@@ -86,7 +53,7 @@ class ReviewGenerator:
                 top_phrases=", ".join(style.top_phrases[:6]) or "none",
                 nigerian_signals=", ".join(style.nigerian_signals) or "none",
             )
-            user_prompt = USER_PROMPT_TEMPLATE.format(
+            user_prompt = TASK_A_REVIEW_USER.format(
                 user_id=user_profile.user_id,
                 platform=user_profile.platform,
                 preferred_categories=", ".join(user_profile.preferred_categories) or "unknown",
@@ -103,10 +70,10 @@ class ReviewGenerator:
                     max_tokens=500,
                     temperature=0.55,
                 )
-                return self._adapt_output(review_text, nigerian_mode)
+                return await self._adapt_output(review_text, nigerian_mode, nigerian_intensity)
             except Exception:
                 pass
-        return self._fallback_review(style, item_details, example_reviews, nigerian_mode)
+        return await self._fallback_review(style, item_details, example_reviews, nigerian_mode, nigerian_intensity)
 
     async def retrieve_example_reviews(
         self,
@@ -138,12 +105,13 @@ class ReviewGenerator:
         self._llm_client = AnthropicLLMClient(model=CLAUDE_MODEL_NAME)
         return self._llm_client
 
-    def _fallback_review(
+    async def _fallback_review(
         self,
         style: StyleFingerprint,
         item_details: ItemDetails,
         example_reviews: list[str],
         nigerian_mode: bool,
+        nigerian_intensity: str,
     ) -> str:
         tone = self._resolve_tone(style)
         attribute_sentence = self._format_attributes(item_details.attributes)
@@ -159,7 +127,7 @@ class ReviewGenerator:
             phrase_sentence=phrase_sentence,
             sentiment_sentence=sentiment_sentence,
         ).strip()
-        return self._adapt_output(review, nigerian_mode)
+        return await self._adapt_output(review, nigerian_mode, nigerian_intensity)
 
     def _resolve_tone(self, style: StyleFingerprint) -> str:
         if style.sentiment_profile.get("positive", 0.0) >= 0.5:
@@ -181,6 +149,6 @@ class ReviewGenerator:
             return "It lines up with the kind of practical detail I usually include in my reviews."
         return "It matches the kind of measured reaction I tend to have."
 
-    def _adapt_output(self, review_text: str, nigerian_mode: bool) -> str:
+    async def _adapt_output(self, review_text: str, nigerian_mode: bool, nigerian_intensity: str) -> str:
         adapter = NigerianContextAdapter(enabled=nigerian_mode)
-        return adapter.adapt_text(review_text.strip())
+        return await adapter.adapt_review(review_text.strip(), intensity=nigerian_intensity)

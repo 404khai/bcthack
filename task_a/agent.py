@@ -48,6 +48,7 @@ class UserModelingAgent:
             user_profile,
             request.item_details,
             nigerian_mode=request.nigerian_mode,
+            nigerian_intensity=getattr(request, "nigerian_intensity", "medium"),
         )
         timings["review_generator"] = perf_counter() - start
 

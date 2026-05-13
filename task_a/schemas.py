@@ -52,6 +52,7 @@ class ReviewRequest(BaseModel):
     user_persona: UserPersona = Field(..., description="Persona profile used for behavioral mimicry.")
     item_details: ItemDetails = Field(..., description="Item details for which a review should be generated.")
     nigerian_mode: bool = Field(False, description="Enables Nigerian contextualization in the generated response.")
+    nigerian_intensity: str = Field("medium", description="Intensity of Nigerian contextualization (light, medium, full).")
 
 
 class ReviewResponse(BaseModel):

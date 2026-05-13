@@ -7,20 +7,9 @@ import json
 from os import getenv
 
 from shared.llm_client import AnthropicLLMClient
+from shared.prompts import TASK_B_CONVERSATION_SUMMARY_SYSTEM, TASK_B_CONVERSATION_SUMMARY_USER
 from task_b.schemas import Turn
 
-PREFERENCE_SUMMARY_SYSTEM_PROMPT = """You summarize recommendation conversations into weighted preference maps.
-
-Return only valid JSON in the form:
-{"attribute_name": weight}
-
-Weights should be floats between 0.0 and 1.0.
-"""
-PREFERENCE_SUMMARY_USER_TEMPLATE = """Conversation history:
-{conversation_history}
-
-Extract the user's refined preferences as a compact preference map.
-"""
 CLAUDE_MODEL_NAME = "claude-sonnet-4-20250514"
 
 
@@ -61,8 +50,8 @@ class ConversationManager:
         if client is not None:
             try:
                 response = await client.generate_text(
-                    system_prompt=PREFERENCE_SUMMARY_SYSTEM_PROMPT,
-                    user_prompt=PREFERENCE_SUMMARY_USER_TEMPLATE.format(
+                    system_prompt=TASK_B_CONVERSATION_SUMMARY_SYSTEM,
+                    user_prompt=TASK_B_CONVERSATION_SUMMARY_USER.format(
                         conversation_history=history_text
                     ),
                     max_tokens=180,

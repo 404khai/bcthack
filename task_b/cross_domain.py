@@ -7,25 +7,11 @@ import json
 from os import getenv
 
 from shared.llm_client import AnthropicLLMClient
+from shared.prompts import TASK_B_CROSS_DOMAIN_SYSTEM, TASK_B_CROSS_DOMAIN_USER
 
 PreferenceMap = dict[str, float]
 
 CLAUDE_MODEL_NAME = "claude-sonnet-4-20250514"
-SYSTEM_PROMPT = """You infer cross-domain preference transfers for recommendations.
-
-Return only valid JSON in the form:
-{"attribute": weight}
-
-Weights should be floats between 0.0 and 1.0.
-"""
-USER_PROMPT_TEMPLATE = """Source reviews:
-{source_reviews}
-
-Target domain:
-{target_domain}
-
-Infer which target-domain preferences logically transfer from the source reviews.
-"""
 DOMAIN_BRIDGES = {
     "goodreads:movies": {"intense storytelling": 0.8, "nollywood crime drama": 0.72},
     "goodreads:food": {"bold flavors": 0.76, "spicy dishes": 0.7},
@@ -53,8 +39,8 @@ class CrossDomainBridge:
         if client is not None:
             try:
                 response = await client.generate_text(
-                    system_prompt=SYSTEM_PROMPT,
-                    user_prompt=USER_PROMPT_TEMPLATE.format(
+                    system_prompt=TASK_B_CROSS_DOMAIN_SYSTEM,
+                    user_prompt=TASK_B_CROSS_DOMAIN_USER.format(
                         source_reviews="\n".join(f"- {review}" for review in source_reviews[:8]),
                         target_domain=target_domain,
                     ),

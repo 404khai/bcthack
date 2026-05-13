@@ -9,35 +9,10 @@ from typing import Any
 
 from shared.llm_client import AnthropicLLMClient
 from shared.nigerian_adapter import NigerianContextAdapter
+from shared.prompts import TASK_B_RERANK_SYSTEM, TASK_B_RERANK_USER
 from task_b.schemas import Item, RankedItem, RequestContext, UserPersona
 
 CLAUDE_MODEL_NAME = "claude-sonnet-4-20250514"
-SYSTEM_PROMPT = """You are reranking recommendation candidates for a personalized recommendation agent.
-
-Return only valid JSON in the form:
-[
-  {
-    "item_id": "...",
-    "score": 0-10,
-    "confidence": 0-1,
-    "explanation": "..."
-  }
-]
-
-Use the user profile, query context, and candidate metadata to provide contextual explanations.
-"""
-USER_PROMPT_TEMPLATE = """User persona:
-{user_profile}
-
-Query context:
-{query_context}
-
-Candidates:
-{candidates}
-
-Rerank the candidates and explain why each one fits.
-"""
-
 
 class LLMRanker:
     """Reranks retrieved candidates using Claude with deterministic fallback logic."""
@@ -62,8 +37,8 @@ class LLMRanker:
         if client is not None:
             try:
                 response = await client.generate_text(
-                    system_prompt=SYSTEM_PROMPT,
-                    user_prompt=USER_PROMPT_TEMPLATE.format(
+                    system_prompt=TASK_B_RERANK_SYSTEM,
+                    user_prompt=TASK_B_RERANK_USER.format(
                         user_profile=user_profile.model_dump(),
                         query_context=query_context.model_dump(),
                         candidates=[candidate.model_dump() for candidate in candidates[:20]],
@@ -72,15 +47,15 @@ class LLMRanker:
                     temperature=0.25,
                 )
                 parsed = json.loads(response)
-                ranked = self._parse_ranked_response(parsed, candidates, adapter)
+                ranked = await self._parse_ranked_response(parsed, candidates, adapter)
                 if ranked:
                     return ranked
             except Exception:
                 pass
 
-        return self._fallback_rank(candidates, user_profile, query_context, adapter)
+        return await self._fallback_rank(candidates, user_profile, query_context, adapter)
 
-    def _parse_ranked_response(
+    async def _parse_ranked_response(
         self,
         parsed: object,
         candidates: list[Item],
@@ -97,6 +72,10 @@ class LLMRanker:
             candidate = candidate_map.get(item_id)
             if candidate is None:
                 continue
+                
+            explanation = str(row.get("explanation", "Recommended based on profile fit."))
+            adapted_explanation = await adapter.adapt_recommendation_explanation(explanation, candidate.category)
+            
             ranked_items.append(
                 RankedItem(
                     item=candidate.model_copy(
@@ -104,12 +83,12 @@ class LLMRanker:
                     ),
                     score=round(max(0.0, min(10.0, float(row.get("score", 0.0)))), 3),
                     confidence=round(max(0.0, min(1.0, float(row.get("confidence", 0.5)))), 3),
-                    explanation=adapter.adapt_text(str(row.get("explanation", "Recommended based on profile fit."))),
+                    explanation=adapted_explanation,
                 )
             )
         return sorted(ranked_items, key=lambda item: item.score, reverse=True)
 
-    def _fallback_rank(
+    async def _fallback_rank(
         self,
         candidates: list[Item],
         user_profile: UserPersona,
@@ -130,6 +109,7 @@ class LLMRanker:
                 f"{candidate.title} fits the request because it aligns with "
                 f"{query_context.category or 'the stated intent'} and the user's known preferences."
             )
+            adapted_explanation = await adapter.adapt_recommendation_explanation(explanation, candidate.category)
             confidence = max(0.35, min(0.95, candidate.similarity_score))
             ranked.append(
                 RankedItem(
@@ -138,7 +118,7 @@ class LLMRanker:
                     ),
                     score=round(min(10.0, score), 3),
                     confidence=round(confidence, 3),
-                    explanation=adapter.adapt_text(explanation),
+                    explanation=adapted_explanation,
                 )
             )
         return sorted(ranked, key=lambda item: item.score, reverse=True)
