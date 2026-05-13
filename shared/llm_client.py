@@ -1,22 +1,28 @@
-"""Anthropic SDK wrapper with simple retry logic."""
+"""Gemini SDK wrapper with simple retry logic, retaining original Anthropic interface."""
 
 from __future__ import annotations
 
 import asyncio
+import logging
 from os import getenv
 
-from anthropic import AnthropicError, AsyncAnthropic
+from google import genai
+from google.genai import types
+from google.api_core.exceptions import ResourceExhausted
 
+logger = logging.getLogger(__name__)
 
 class AnthropicLLMClient:
-    """Async Anthropic client with bounded retries for transient errors."""
+    """Async Gemini client masquerading as Anthropic client with bounded retries for transient errors."""
 
     def __init__(self, api_key: str | None = None, model: str | None = None) -> None:
-        resolved_api_key = api_key or getenv("ANTHROPIC_API_KEY")
+        resolved_api_key = api_key or getenv("GEMINI_API_KEY")
         if not resolved_api_key:
-            raise ValueError("ANTHROPIC_API_KEY environment variable is required.")
-        self.client = AsyncAnthropic(api_key=resolved_api_key)
-        self.model = model or getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-latest")
+            raise ValueError("GEMINI_API_KEY environment variable is required.")
+        
+        self.client = genai.Client(api_key=resolved_api_key)
+        self.model = "gemini-2.5-flash"
+        self.free_tier_mode = getenv("FREE_TIER_MODE", "false").lower() == "true"
 
     async def generate_text(
         self,
@@ -32,21 +38,61 @@ class AnthropicLLMClient:
 
         for attempt in range(1, retries + 1):
             try:
-                response = await self.client.messages.create(
-                    model=self.model,
-                    system=system_prompt,
-                    max_tokens=max_tokens,
-                    temperature=temperature,
-                    messages=[{"role": "user", "content": user_prompt}],
-                )
-                return "".join(
-                    block.text for block in response.content if getattr(block, "text", None)
-                ).strip()
-            except AnthropicError as error:
+                if self.free_tier_mode:
+                    await asyncio.sleep(1.0)
+
+                def _generate():
+                    return self.client.models.generate_content(
+                        model=self.model,
+                        contents=user_prompt,
+                        config=types.GenerateContentConfig(
+                            system_instruction=system_prompt,
+                            max_output_tokens=max_tokens,
+                            temperature=temperature,
+                        )
+                    )
+
+                response = await asyncio.to_thread(_generate)
+                return response.text
+            except ResourceExhausted as error:
                 last_error = error
                 if attempt == retries:
                     break
+                logger.warning(f"Rate limit hit. Retrying in {delay_seconds}s...")
+                await asyncio.sleep(delay_seconds)
+                delay_seconds *= 2
+            except Exception as error:
+                # Also handle 429 errors that might not be caught by ResourceExhausted
+                error_str = str(error).lower()
+                is_rate_limit = "429" in error_str or "quota" in error_str or "exhausted" in error_str
+                
+                last_error = error
+                if attempt == retries:
+                    break
+                    
+                if is_rate_limit:
+                    logger.warning(f"Rate limit hit. Retrying in {delay_seconds}s...")
+                else:
+                    logger.warning(f"Error calling Gemini API: {error}. Retrying in {delay_seconds}s...")
+                    
                 await asyncio.sleep(delay_seconds)
                 delay_seconds *= 2
 
-        raise RuntimeError("Anthropic text generation failed after retries.") from last_error
+        raise RuntimeError("Text generation failed after retries.") from last_error
+
+    # Alias to match exactly what the prompt requested, just in case
+    async def complete(self, system: str, user: str, max_tokens: int = 700) -> str:
+        return await self.generate_text(system, user, max_tokens=max_tokens)
+
+
+async def test_connection():
+    print("Testing Gemini connection...")
+    try:
+        client = AnthropicLLMClient()
+        response = await client.generate_text("You are a helpful assistant.", "Say hello", max_tokens=50)
+        print(f"Response: {response}")
+    except Exception as e:
+        print(f"Failed: {e}")
+
+if __name__ == "__main__":
+    asyncio.run(test_connection())
