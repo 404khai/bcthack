@@ -8,25 +8,11 @@ from os import getenv
 from typing import Any
 
 from shared.llm_client import AnthropicLLMClient
+from shared.nigerian_adapter import NigerianContextAdapter
+from shared.prompts import TASK_B_COLD_START_SYSTEM, TASK_B_COLD_START_USER
 from task_b.schemas import Item, RequestContext, UserPersona
 
 CLAUDE_MODEL_NAME = "claude-sonnet-4-20250514"
-SYSTEM_PROMPT = """You extract compact recommendation preferences from a user persona description.
-
-Return only valid JSON in the form:
-{"preference phrase": weight}
-
-Weights must be floats between 0.0 and 1.0.
-"""
-USER_PROMPT_TEMPLATE = """User persona description:
-{persona_text}
-
-Existing preference hints:
-{preferences}
-
-Extract recommendation preferences relevant to the current request context:
-{request_context}
-"""
 POPULARITY_FALLBACKS = {
     "restaurant": [
         ("popular-jollof", "Popular Jollof Kitchen", "restaurant", 0.72),
@@ -45,24 +31,6 @@ POPULARITY_FALLBACKS = {
         ("city-favorite", "City Favorite Pick", "experience", 0.61),
     ],
 }
-NIGERIAN_DEFAULTS = {
-    "restaurant": [
-        ("naija-buka", "Trusted Lagos Buka Experience", "restaurant", 0.82),
-        ("jollof-signature", "Smoky Party Jollof Spot", "restaurant", 0.8),
-    ],
-    "movies": [
-        ("nollywood-thriller", "Bold Nollywood Thriller Pick", "movies", 0.81),
-        ("crime-series", "Intense Nigerian Crime Series", "movies", 0.78),
-    ],
-    "food": [
-        ("suya-boulevard", "Peppery Suya Boulevard", "food", 0.84),
-        ("small-chops", "Small Chops Platter Night", "food", 0.73),
-    ],
-    "default": [
-        ("lagos-weekend", "Lagos Weekend Favorite", "experience", 0.7),
-        ("naija-comfort", "Naija Comfort Discovery", "experience", 0.68),
-    ],
-}
 
 
 class ColdStartHandler:
@@ -79,11 +47,30 @@ class ColdStartHandler:
         self,
         user_profile: UserPersona,
         request_context: RequestContext,
+        nigerian_mode: bool = False,
     ) -> list[Item]:
         """Builds hybrid cold-start candidates using explicit and default signals."""
-        explicit_preferences = await self._extract_explicit_preferences(user_profile, request_context)
+        adapter = NigerianContextAdapter(enabled=nigerian_mode)
+        
+        explicit_preferences = await self._extract_explicit_preferences(user_profile, request_context, nigerian_mode)
         category = (request_context.category or "default").lower()
-        nigerian_defaults = self._build_items(NIGERIAN_DEFAULTS.get(category, NIGERIAN_DEFAULTS["default"]), "nigerian_default")
+        
+        if nigerian_mode:
+            defaults_list = adapter.get_cultural_defaults(category)
+            nigerian_defaults = [
+                Item(
+                    item_id=f"ng-default-{idx}",
+                    title=title,
+                    category=category if category != "default" else "experience",
+                    source="nigerian_default",
+                    similarity_score=0.8,
+                    metadata={"fallback": True}
+                )
+                for idx, title in enumerate(defaults_list)
+            ]
+        else:
+            nigerian_defaults = []
+            
         popularity_items = self._build_items(POPULARITY_FALLBACKS.get(category, POPULARITY_FALLBACKS["default"]), "popularity")
 
         weighted_items: dict[str, Item] = {}
@@ -109,6 +96,7 @@ class ColdStartHandler:
         self,
         user_profile: UserPersona,
         request_context: RequestContext,
+        nigerian_mode: bool = False,
     ) -> dict[str, float]:
         persona_text = user_profile.persona_text or ""
         if isinstance(user_profile.preferences, dict):
@@ -116,12 +104,16 @@ class ColdStartHandler:
         else:
             existing_preferences = {}
 
+        if nigerian_mode and not persona_text and not existing_preferences:
+            # Assume user is in Lagos unless stated otherwise
+            existing_preferences["location"] = "Lagos, Nigeria"
+
         client = self._get_llm_client()
         if client is not None and (persona_text or existing_preferences):
             try:
                 response = await client.generate_text(
-                    system_prompt=SYSTEM_PROMPT,
-                    user_prompt=USER_PROMPT_TEMPLATE.format(
+                    system_prompt=TASK_B_COLD_START_SYSTEM,
+                    user_prompt=TASK_B_COLD_START_USER.format(
                         persona_text=persona_text or "No persona text provided.",
                         preferences=existing_preferences,
                         request_context=request_context.model_dump(),

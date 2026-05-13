@@ -8,32 +8,11 @@ from os import getenv
 from statistics import mean
 
 from shared.llm_client import AnthropicLLMClient
+from shared.prompts import TASK_A_RATING_SYSTEM, TASK_A_RATING_USER
 from shared.user_profile import UserProfile
 from task_a.schemas import ItemDetails
 
 CLAUDE_MODEL_NAME = "claude-sonnet-4-20250514"
-SYSTEM_PROMPT = """You are estimating the most likely star rating a user would assign to an item.
-
-Rules:
-- Consider the user's historical rating behavior first.
-- Use the generated review text as evidence of sentiment strength.
-- Return only a single number between 1.0 and 5.0.
-"""
-USER_PROMPT_TEMPLATE = """User rating history summary:
-- Average rating: {avg_rating}
-- Rating standard deviation: {rating_std}
-- Preferred categories: {preferred_categories}
-
-Target item:
-- Name: {item_name}
-- Category: {item_category}
-- Attributes: {item_attributes}
-
-Generated review:
-{review_text}
-
-What rating would this user most likely give?
-"""
 POSITIVE_WORDS = {
     "amazing",
     "balanced",
@@ -91,7 +70,7 @@ class RatingPredictor:
         client = self._get_llm_client()
         if client is None:
             return fallback_rating
-        user_prompt = USER_PROMPT_TEMPLATE.format(
+        user_prompt = TASK_A_RATING_USER.format(
             avg_rating=f"{user_profile.style_fingerprint.avg_rating:.2f}",
             rating_std=f"{user_profile.style_fingerprint.rating_std:.2f}",
             preferred_categories=", ".join(user_profile.preferred_categories) or "unknown",
@@ -102,7 +81,7 @@ class RatingPredictor:
         )
         try:
             response = await client.generate_text(
-                system_prompt=SYSTEM_PROMPT,
+                system_prompt=TASK_A_RATING_SYSTEM,
                 user_prompt=user_prompt,
                 max_tokens=32,
                 temperature=0.1,

@@ -190,7 +190,7 @@ class RecommendationAgent:
         context = request.request_context
         category = context.category or self._infer_primary_category(request.user_persona)
         if plan.strategy == "cold_start_hybrid":
-            candidates = await self.cold_start.handle(request.user_persona, context)
+            candidates = await self.cold_start.handle(request.user_persona, context, nigerian_mode=request.nigerian_mode)
             return self._deduplicate_candidates(candidates)
 
         history_candidates = await self.retriever.query_by_user_history(
