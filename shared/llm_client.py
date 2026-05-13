@@ -6,7 +6,8 @@ import asyncio
 import logging
 from os import getenv
 
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from google.api_core.exceptions import ResourceExhausted
 
 logger = logging.getLogger(__name__)
@@ -19,7 +20,7 @@ class AnthropicLLMClient:
         if not resolved_api_key:
             raise ValueError("GEMINI_API_KEY environment variable is required.")
         
-        genai.configure(api_key=resolved_api_key)
+        self.client = genai.Client(api_key=resolved_api_key)
         self.model = "gemini-2.5-flash"
         self.free_tier_mode = getenv("FREE_TIER_MODE", "false").lower() == "true"
 
@@ -40,16 +41,12 @@ class AnthropicLLMClient:
                 if self.free_tier_mode:
                     await asyncio.sleep(1.0)
 
-                # Initialize model with system instruction
-                model_instance = genai.GenerativeModel(
-                    model_name=self.model,
-                    system_instruction=system_prompt
-                )
-
                 def _generate():
-                    return model_instance.generate_content(
-                        user_prompt,
-                        generation_config=genai.types.GenerationConfig(
+                    return self.client.models.generate_content(
+                        model=self.model,
+                        contents=user_prompt,
+                        config=types.GenerateContentConfig(
+                            system_instruction=system_prompt,
                             max_output_tokens=max_tokens,
                             temperature=temperature,
                         )
@@ -65,10 +62,19 @@ class AnthropicLLMClient:
                 await asyncio.sleep(delay_seconds)
                 delay_seconds *= 2
             except Exception as error:
+                # Also handle 429 errors that might not be caught by ResourceExhausted
+                error_str = str(error).lower()
+                is_rate_limit = "429" in error_str or "quota" in error_str or "exhausted" in error_str
+                
                 last_error = error
                 if attempt == retries:
                     break
-                logger.warning(f"Error calling Gemini API: {error}. Retrying in {delay_seconds}s...")
+                    
+                if is_rate_limit:
+                    logger.warning(f"Rate limit hit. Retrying in {delay_seconds}s...")
+                else:
+                    logger.warning(f"Error calling Gemini API: {error}. Retrying in {delay_seconds}s...")
+                    
                 await asyncio.sleep(delay_seconds)
                 delay_seconds *= 2
 

@@ -22,6 +22,32 @@ Services will be available at:
 - **Task B (Recommendation)**: [http://localhost:8002/docs](http://localhost:8002/docs)
 - **ChromaDB**: [http://localhost:8000](http://localhost:8000)
 
+## Environment Setup
+
+### Python Virtual Environment
+```bash
+# Create and activate virtual environment
+python -m venv venv
+
+# Windows (PowerShell)
+venv\Scripts\Activate.ps1
+
+# Windows (CMD)
+venv\Scripts\activate.bat
+
+# Mac/Linux
+source venv/bin/activate
+
+# Install all dependencies
+pip install -r task_a/requirements.txt
+pip install -r task_b/requirements.txt
+```
+
+### API Keys
+Get your free Gemini API key at: https://aistudio.google.com/apikey
+No billing required for the free tier (1,500 requests/day).
+Add it to your .env file: `GEMINI_API_KEY=your_key_here`
+
 ## Architecture Overview
 
 ```
@@ -50,7 +76,7 @@ Services will be available at:
 ## Tech Stack
 
 - **Framework**: FastAPI (async, OpenAPI docs, easy containerization)
-- **LLM Backbone**: Anthropic Claude via `anthropic` Python SDK
+- **LLM Backbone**: Google Gemini 2.5 Flash via `google-genai` Python SDK (free tier)
 - **Embeddings**: `sentence-transformers/all-MiniLM-L6-v2` (fast, free, local)
 - **Vector Store**: ChromaDB (persistent, no external server, Docker-friendly)
 - **Dataset Handling**: pandas + custom processors
@@ -86,6 +112,8 @@ python -m data.create_samples
 This creates 100-row sample files in `data/sample/test_fixtures/`.
 
 ### 3. Ingest Data into ChromaDB
+
+Ensure your venv is activated before running any python commands
 
 ```bash
 # Full ingestion (all datasets)
