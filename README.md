@@ -6,12 +6,12 @@ A submission for the DSN x BCT LLM Agent Hackathon featuring two containerized L
 
 ```bash
 # 1. Clone and setup
-git clone <repository-url>
+git clone https://github.com/404khai/bcthack
 cd bcthack
 
 # 2. Configure environment
 cp .env.example .env
-# Edit .env and add your ANTHROPIC_API_KEY
+# Edit .env and add your GEMINI_API_KEY
 
 # 3. Start all services
 docker-compose up --build
