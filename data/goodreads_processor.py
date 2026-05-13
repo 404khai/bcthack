@@ -1,15 +1,19 @@
-"""Goodreads dataset processor with proper joins and metadata extraction."""
+"""Goodreads dataset processor with book-derived items and per-user holdouts."""
 
 from __future__ import annotations
 
 import json
-from collections import defaultdict
+import math
+from collections import Counter, defaultdict
 from dataclasses import dataclass
+from datetime import datetime
 from os import getenv
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterator
 
-from shared.user_profile import ReviewRecord, StyleFingerprint, UserProfile, build_style_fingerprint
+from tqdm import tqdm
+
+from shared.user_profile import ReviewRecord, UserProfile, build_style_fingerprint
 
 
 @dataclass(slots=True)
@@ -28,230 +32,232 @@ class GoodreadsProcessor:
     """Processes Goodreads sample files into user profiles, items, and reviews."""
 
     def __init__(self) -> None:
-        self.reviews_path = Path(
-            getenv("GR_REVIEWS_PATH", "data/sample/goodreads_reviews_sample.json")
-        )
-        self.books_path = Path(
-            getenv("GR_BOOKS_PATH", "data/sample/goodreads_books_sample.json")
-        )
+        self.reviews_path = Path(getenv("GR_REVIEWS_PATH", "data/sample/goodreads_reviews_sample.json"))
+        self.books_path = Path(getenv("GR_BOOKS_PATH", "data/sample/goodreads_books_sample.json"))
 
     def load_all(self) -> tuple[list[UserProfile], list[ItemRecord], list[ReviewRecord]]:
-        """
-        Loads all Goodreads data and returns users, items, and reviews.
-        
-        Returns:
-            Tuple of (users, items, reviews) where:
-            - users: List of UserProfile objects
-            - items: List of ItemRecord objects for books
-            - reviews: List of ReviewRecord objects
-        """
-        print(f"Loading Goodreads data from {self.reviews_path} and {self.books_path}")
-        
-        # Load books first to create item records
-        books = self._load_books()
-        print(f"Loaded {len(books)} books")
-        
-        # Load reviews and join with books
-        users, reviews = self._load_reviews(books)
-        print(f"Loaded {len(users)} users and {len(reviews)} reviews")
-        
-        # Build items from books
-        items = self._build_items(books)
-        print(f"Built {len(items)} item records")
-        
-        return users, items, reviews
+        """Compatibility wrapper for older call sites."""
+        return self.process(sample_only=False)
 
-    def _load_books(self) -> dict[str, dict[str, Any]]:
-        """Loads books from the Goodreads books sample file."""
-        books: dict[str, dict[str, Any]] = {}
-        
+    def process(self, sample_only: bool = False) -> tuple[list[UserProfile], list[ItemRecord], list[ReviewRecord]]:
+        """Returns (users, items, reviews) with book-derived item records."""
+        books = self._load_books()
+        if not self.reviews_path.exists():
+            print(f"Warning: Reviews file not found at {self.reviews_path}")
+            return [], list(books.values()), []
+
+        min_reviews = 2 if sample_only else 10
+        max_users = 100 if sample_only else 2000
+
+        user_counts: Counter[str] = Counter()
+        user_order: list[str] = []
+        seen_users: set[str] = set()
+
+        for record in tqdm(self._iter_jsonl(self.reviews_path), desc="[Goodreads] Counting reviews"):
+            user_id = str(record.get("user_id", "")).strip()
+            book_id = str(record.get("book_id", "")).strip()
+            if not user_id or not book_id:
+                continue
+
+            user_counts[user_id] += 1
+            if user_id not in seen_users:
+                seen_users.add(user_id)
+                user_order.append(user_id)
+
+        eligible = {user_id for user_id, count in user_counts.items() if count >= min_reviews}
+        selected_original_ids = [user_id for user_id in user_order if user_id in eligible][:max_users]
+        selected_set = set(selected_original_ids)
+
+        reviews_by_user: dict[str, list[tuple[float, ReviewRecord]]] = defaultdict(list)
+        all_reviews: list[ReviewRecord] = []
+        book_review_counts: Counter[str] = Counter()
+
+        for record in tqdm(self._iter_jsonl(self.reviews_path), desc="[Goodreads] Collecting reviews"):
+            original_user_id = str(record.get("user_id", "")).strip()
+            book_id = str(record.get("book_id", "")).strip()
+            review_id = str(record.get("review_id", "")).strip()
+            if original_user_id not in selected_set or not book_id or not review_id:
+                continue
+
+            item_id = f"goodreads_{book_id}"
+            user_id = f"goodreads_{original_user_id}"
+            book = books.get(item_id)
+            category = book.category if book else "books"
+            genre_names = book.metadata.get("genres", []) if book else []
+            sort_key = self._sort_timestamp(record.get("date_updated") or record.get("date_added"))
+
+            review = ReviewRecord(
+                review_id=f"goodreads_{review_id}",
+                item_id=item_id,
+                source="goodreads",
+                rating=self._safe_float(record.get("rating"), default=0.0),
+                review_text=str(record.get("review_text", "")).strip(),
+                category=category,
+                created_at=str(record.get("date_added", "")).strip() or None,
+                metadata={
+                    "user_id": user_id,
+                    "original_user_id": original_user_id,
+                    "book_id": book_id,
+                    "title": book.name if book else "Unknown Book",
+                    "genres": genre_names,
+                    "author_id": book.metadata.get("author_id", "unknown") if book else "unknown",
+                },
+            )
+
+            reviews_by_user[user_id].append((sort_key, review))
+            all_reviews.append(review)
+            book_review_counts[item_id] += 1
+
+        users: list[UserProfile] = []
+        filtered_reviews: list[ReviewRecord] = []
+        for original_user_id in selected_original_ids:
+            user_id = f"goodreads_{original_user_id}"
+            timed_reviews = reviews_by_user.get(user_id, [])
+            if len(timed_reviews) < min_reviews:
+                continue
+
+            sorted_reviews = [review for _, review in sorted(timed_reviews, key=lambda pair: pair[0])]
+            holdout_count = max(1, math.ceil(len(sorted_reviews) * 0.2))
+            split_index = max(1, len(sorted_reviews) - holdout_count)
+            train_reviews = sorted_reviews[:split_index]
+            held_out_reviews = sorted_reviews[split_index:]
+
+            fingerprint = build_style_fingerprint(train_reviews)
+            preferred_categories = [
+                category
+                for category, _ in Counter(
+                    genre
+                    for review in train_reviews
+                    for genre in review.metadata.get("genres", [])
+                    if genre
+                ).most_common(5)
+            ]
+
+            users.append(
+                UserProfile(
+                    user_id=user_id,
+                    platform="goodreads",
+                    review_history=train_reviews,
+                    held_out_reviews=held_out_reviews,
+                    style_fingerprint=fingerprint,
+                    preferred_categories=preferred_categories,
+                    metadata={
+                        "review_count": len(train_reviews),
+                        "test_review_count": len(held_out_reviews),
+                    },
+                )
+            )
+            filtered_reviews.extend(sorted_reviews)
+
+        items = [
+            item
+            for item_id, item in books.items()
+            if book_review_counts.get(item_id, 0) > 0
+        ]
+        for item in items:
+            item.review_count = book_review_counts.get(item.item_id, 0)
+
+        return users, items, filtered_reviews
+
+    def _load_books(self) -> dict[str, ItemRecord]:
+        """Loads books from the Goodreads sample into item records."""
+        books: dict[str, ItemRecord] = {}
         if not self.books_path.exists():
             print(f"Warning: Books file not found at {self.books_path}")
             return books
-            
-        with self.books_path.open("r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                    
-                try:
-                    book = json.loads(line)
-                    book_id = book.get("book_id")
-                    if book_id:
-                        books[book_id] = book
-                except json.JSONDecodeError:
-                    continue
-                    
+
+        for record in tqdm(self._iter_jsonl(self.books_path), desc="[Goodreads] Loading books"):
+            book_id = str(record.get("book_id", "")).strip()
+            if not book_id:
+                continue
+
+            authors = record.get("authors", []) or []
+            author_id = authors[0].get("author_id", "unknown") if authors else "unknown"
+            shelves = record.get("popular_shelves", []) or []
+            genres = self._extract_genres(record)
+            category = ""
+            if shelves and isinstance(shelves[0], dict):
+                category = str(shelves[0].get("name", "")).strip()
+            if not category:
+                category = genres[0] if genres else "books"
+
+            item_id = f"goodreads_{book_id}"
+            books[item_id] = ItemRecord(
+                item_id=item_id,
+                name=str(record.get("title", "Unknown Book")).strip(),
+                category=category,
+                avg_rating=self._safe_float(record.get("average_rating"), default=0.0),
+                review_count=0,
+                metadata={
+                    "book_id": book_id,
+                    "author_id": author_id,
+                    "authors": authors,
+                    "genres": genres,
+                    "description": str(record.get("description", ""))[:500],
+                    "language_code": str(record.get("language_code", "")).strip(),
+                },
+            )
+
+        print(f"[Goodreads] Loaded {len(books)} books")
         return books
 
-    def _load_reviews(self, books: dict[str, dict[str, Any]]) -> tuple[list[UserProfile], list[ReviewRecord]]:
-        """Loads reviews and builds user profiles."""
-        if not self.reviews_path.exists():
-            print(f"Warning: Reviews file not found at {self.reviews_path}")
-            return [], []
-            
-        # Group reviews by user
-        user_reviews: dict[str, list[ReviewRecord]] = defaultdict(list)
-        all_reviews: list[ReviewRecord] = []
-        
-        with self.reviews_path.open("r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                    
-                try:
-                    review_data = json.loads(line)
-                    user_id = review_data.get("user_id")
-                    book_id = review_data.get("book_id")
-                    review_id = review_data.get("review_id")
-                    
-                    if not user_id or not book_id or not review_id:
-                        continue
-                        
-                    # Get book metadata
-                    book = books.get(book_id, {})
-                    
-                    # Extract author information
-                    authors = book.get("authors", [])
-                    author_id = authors[0].get("author_id") if authors else "unknown"
-                    
-                    # Extract top 3 genres by count
-                    genres_data = book.get("genres", [])
-                    # Sort genres by count (convert to int, handle empty strings)
-                    sorted_genres = sorted(
-                        genres_data,
-                        key=lambda g: int(g.get("count", 0)) if g.get("count", "").isdigit() else 0,
-                        reverse=True
-                    )
-                    top_genres = [g.get("name", "") for g in sorted_genres[:3] if g.get("name")]
-                    
-                    # Create review record
-                    review_record = ReviewRecord(
-                        review_id=review_id,
-                        item_id=book_id,
-                        source="goodreads",
-                        rating=float(review_data.get("rating", 0)),
-                        review_text=review_data.get("review_text", ""),
-                        category="books",
-                        created_at=review_data.get("date_added"),
-                        metadata={
-                            "title": book.get("title", "Unknown Book"),
-                            "author_id": author_id,
-                            "genres": top_genres,
-                            "language_code": book.get("language_code", ""),
-                            "average_rating": book.get("average_rating", "0.0"),
-                        }
-                    )
-                    
-                    user_reviews[user_id].append(review_record)
-                    all_reviews.append(review_record)
-                    
-                except (json.JSONDecodeError, ValueError, KeyError) as e:
-                    continue
-                    
-        # Build user profiles
-        users: list[UserProfile] = []
-        for user_id, reviews in user_reviews.items():
-            if len(reviews) < 2:  # Need at least 2 reviews to build fingerprint
-                continue
-                
-            # Sort reviews by date for deterministic train/test split
-            reviews.sort(key=lambda r: r.created_at or "")
-            
-            # Apply 80/20 split per user
-            split_idx = int(len(reviews) * 0.8)
-            train_reviews = reviews[:split_idx]
-            test_reviews = reviews[split_idx:]
-            
-            # Build style fingerprint from training reviews
-            fingerprint = build_style_fingerprint(train_reviews)
-            
-            # Extract preferred categories from book genres
-            preferred_categories = []
-            for review in train_reviews:
-                genres = review.metadata.get("genres", [])
-                preferred_categories.extend(genres)
-            
-            # Get top 5 unique categories
-            from collections import Counter
-            category_counts = Counter(preferred_categories)
-            top_categories = [cat for cat, _ in category_counts.most_common(5)]
-            
-            # Create user profile
-            user_profile = UserProfile(
-                user_id=user_id,
-                platform="goodreads",
-                review_history=train_reviews,
-                style_fingerprint=fingerprint,
-                preferred_categories=top_categories,
-                held_out_reviews=test_reviews,
-                metadata={
-                    "review_count": len(train_reviews),
-                    "test_review_count": len(test_reviews),
-                }
-            )
-            
-            users.append(user_profile)
-            
-        return users, all_reviews
-
-    def _build_items(self, books: dict[str, dict[str, Any]]) -> list[ItemRecord]:
-        """Builds ItemRecord objects from book data."""
-        items: list[ItemRecord] = []
-        
-        for book_id, book in books.items():
-            # Extract author information
-            authors = book.get("authors", [])
-            author_id = authors[0].get("author_id") if authors else "unknown"
-            
-            # Extract top 3 genres by count
-            genres_data = book.get("genres", [])
+    @staticmethod
+    def _extract_genres(record: dict[str, Any]) -> list[str]:
+        """Extracts ordered genre-like labels from Goodreads book metadata."""
+        genres = record.get("genres", []) or []
+        if genres:
             sorted_genres = sorted(
-                genres_data,
-                key=lambda g: int(g.get("count", 0)) if g.get("count", "").isdigit() else 0,
-                reverse=True
+                genres,
+                key=lambda genre: GoodreadsProcessor._safe_int(genre.get("count")),
+                reverse=True,
             )
-            top_genres = [g.get("name", "") for g in sorted_genres[:3] if g.get("name")]
-            
-            # Use the first genre as category, or "books" as fallback
-            category = top_genres[0] if top_genres else "books"
-            
-            # Parse average rating
-            avg_rating_str = book.get("average_rating", "0.0")
-            try:
-                avg_rating = float(avg_rating_str)
-            except ValueError:
-                avg_rating = 0.0
-                
-            # Create item record
-            item = ItemRecord(
-                item_id=book_id,
-                name=book.get("title", "Unknown Book"),
-                category=category,
-                avg_rating=avg_rating,
-                review_count=0,  # We don't have review counts in the sample
-                metadata={
-                    "authors": authors,
-                    "genres": top_genres,
-                    "description": book.get("description", "")[:500],
-                    "language_code": book.get("language_code", ""),
-                    "author_id": author_id,
-                }
-            )
-            
-            items.append(item)
-            
-        return items
+            return [str(genre.get("name", "")).strip() for genre in sorted_genres if str(genre.get("name", "")).strip()]
 
-    def _read_jsonl(self, file_path: Path) -> Iterable[dict[str, Any]]:
+        shelves = record.get("popular_shelves", []) or []
+        return [
+            str(shelf.get("name", "")).strip()
+            for shelf in shelves
+            if isinstance(shelf, dict) and str(shelf.get("name", "")).strip()
+        ]
+
+    @staticmethod
+    def _iter_jsonl(file_path: Path) -> Iterator[dict[str, Any]]:
         """Reads a JSONL file line by line."""
-        with file_path.open("r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if line:
-                    try:
-                        yield json.loads(line)
-                    except json.JSONDecodeError:
-                        continue
+        with file_path.open("r", encoding="utf-8") as handle:
+            for line in handle:
+                raw = line.strip()
+                if not raw:
+                    continue
+                try:
+                    yield json.loads(raw)
+                except json.JSONDecodeError:
+                    continue
+
+    @staticmethod
+    def _safe_float(value: Any, default: float = 0.0) -> float:
+        """Converts a value to float with a fallback."""
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return default
+
+    @staticmethod
+    def _safe_int(value: Any) -> int:
+        """Converts a value to int with a fallback."""
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return 0
+
+    @staticmethod
+    def _sort_timestamp(value: Any) -> float:
+        """Parses Goodreads timestamps into sortable numeric values."""
+        text = str(value or "").strip()
+        if not text:
+            return 0.0
+        for fmt in ("%a %b %d %H:%M:%S %z %Y", "%a %b %d %H:%M:%S %Y"):
+            try:
+                return datetime.strptime(text, fmt).timestamp()
+            except ValueError:
+                continue
+        return 0.0
