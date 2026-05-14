@@ -3,10 +3,38 @@
 
 from __future__ import annotations
 
+import logging
+from os import getenv
+
 from fastapi import FastAPI
 
 from task_a.agent import UserModelingAgent
 from task_a.schemas import HealthResponse, ReviewRequest, ReviewResponse
+
+log_level_name = getenv("LOG_LEVEL", "INFO").upper()
+log_level = getattr(logging, log_level_name, logging.INFO)
+
+root_logger = logging.getLogger()
+if not root_logger.handlers:
+    logging.basicConfig(
+        level=log_level,
+        format="%(levelname)s: %(name)s: %(message)s",
+    )
+else:
+    root_logger.setLevel(log_level)
+
+for logger_name in [
+    "task_a",
+    "shared",
+    "task_a.agent",
+    "task_a.review_generator",
+    "shared.vector_store",
+    "shared.nigerian_adapter",
+    "shared.llm_client",
+]:
+    logging.getLogger(logger_name).setLevel(log_level)
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Task A - User Modeling Service",
@@ -18,6 +46,7 @@ app = FastAPI(
 )
 
 agent = UserModelingAgent()
+logger.info("Task A logging initialized at level %s", log_level_name)
 
 
 @app.get(

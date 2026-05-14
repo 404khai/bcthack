@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from os import getenv
 from typing import Literal
-import asyncio
+import logging
 
 from shared.llm_client import AnthropicLLMClient
 from shared.prompts import (
@@ -52,6 +52,8 @@ NIGERIAN_LEXICON = {
     ]
 }
 
+logger = logging.getLogger(__name__)
+
 
 class NigerianContextAdapter:
     """Adapts text and recommendations to sound authentically Nigerian."""
@@ -69,13 +71,14 @@ class NigerianContextAdapter:
     def _get_llm_client(self) -> AnthropicLLMClient | None:
         if self._llm_client is not None:
             return self._llm_client
-        if not getenv("ANTHROPIC_API_KEY"):
+        if not getenv("GEMINI_API_KEY"):
             return None
         self._llm_client = AnthropicLLMClient(model="claude-sonnet-4-20250514")
         return self._llm_client
 
     async def adapt_review(self, review_text: str, intensity: Literal["light", "medium", "full"] = "medium") -> str:
         """Adapts a review using Claude based on intensity."""
+        logger.info("Nigerian adapter called: %s, intensity: %s", self.enabled, intensity)
         if not self.enabled or not review_text:
             return review_text
             
@@ -91,10 +94,13 @@ class NigerianContextAdapter:
 
         try:
             adapted_text = await client.generate_text(
-                system_prompt="You are a cultural adapter.",
+                system_prompt=(
+                    "You are an expert cultural rewriter who rewrites reviews to sound naturally Nigerian "
+                    "without changing the underlying sentiment, judgment, or meaning."
+                ),
                 user_prompt=prompt_template.format(text=review_text),
-                max_tokens=300,
-                temperature=0.4,
+                max_tokens=350,
+                temperature=0.55,
             )
             return adapted_text.strip()
         except Exception:

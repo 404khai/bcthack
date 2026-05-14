@@ -26,6 +26,7 @@ class UserModelingAgent:
     async def run(self, request: ReviewRequest) -> ReviewResponse:
         """Runs the full Task A pipeline and logs the duration of each step."""
         timings: dict[str, float] = {}
+        logger.info("[AGENT] Starting for user: %s", request.user_persona.user_id)
 
         start = perf_counter()
         review_history = self._build_review_records(request)
@@ -33,6 +34,7 @@ class UserModelingAgent:
             request.user_persona.user_id,
             request.user_persona.review_history,
         )
+        logger.info("[AGENT] Style fingerprint: %s", style_fingerprint)
         user_profile = UserProfile(
             user_id=request.user_persona.user_id,
             platform=request.user_persona.platform,
@@ -41,15 +43,31 @@ class UserModelingAgent:
             preferred_categories=self._preferred_categories(request.user_persona),
             metadata={"preferences": request.user_persona.preferences},
         )
+        logger.info("[AGENT] ChromaDB fetch result: %s", user_profile)
         timings["persona_builder"] = perf_counter() - start
 
         start = perf_counter()
+        prompt = (
+            f"user_id={request.user_persona.user_id}; "
+            f"platform={request.user_persona.platform}; "
+            f"item={request.item_details.name}; "
+            f"category={request.item_details.category}; "
+            f"attrs={request.item_details.attributes}"
+        )
+        logger.info("[AGENT] Calling LLM with prompt length: %s", len(prompt))
+        will_call_adapter = request.nigerian_mode
+        logger.info(
+            "[AGENT] Nigerian mode: %s, calling adapter: %s",
+            request.nigerian_mode,
+            will_call_adapter,
+        )
         review_text = await self.review_generator.generate(
             user_profile,
             request.item_details,
             nigerian_mode=request.nigerian_mode,
             nigerian_intensity=getattr(request, "nigerian_intensity", "medium"),
         )
+        logger.info("[AGENT] LLM response received: %s", review_text[:100])
         timings["review_generator"] = perf_counter() - start
 
         start = perf_counter()

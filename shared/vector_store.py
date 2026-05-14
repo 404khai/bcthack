@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from os import getenv
 from pathlib import Path
 from typing import Any, Sequence
@@ -9,6 +10,8 @@ from typing import Any, Sequence
 import chromadb
 from chromadb.api.models.Collection import Collection
 from chromadb.config import Settings
+
+logger = logging.getLogger(__name__)
 
 
 class VectorStore:
@@ -53,12 +56,20 @@ class VectorStore:
         where: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         collection = self.get_collection(collection_name)
-        return collection.query(
+        user_id = where.get("user_id") if where else None
+        logger.info("[CHROMADB] Querying for user_id: %s", user_id)
+        results = collection.query(
             query_embeddings=query_embeddings,
             query_texts=query_texts,
             n_results=n_results,
             where=where,
         )
+        result_count = 0
+        documents = results.get("documents")
+        if documents and documents[0]:
+            result_count = len(documents[0])
+        logger.info("[CHROMADB] Query result count: %s", result_count)
+        return results
 
     def count(self, collection_name: str) -> int:
         return self.get_collection(collection_name).count()

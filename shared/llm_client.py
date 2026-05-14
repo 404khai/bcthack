@@ -1,4 +1,4 @@
-"""Gemini SDK wrapper with simple retry logic, retaining original Anthropic interface."""
+"""Gemini SDK wrapper with simple retry logic."""
 
 from __future__ import annotations
 
@@ -12,8 +12,9 @@ from google.api_core.exceptions import ResourceExhausted
 
 logger = logging.getLogger(__name__)
 
-class AnthropicLLMClient:
-    """Async Gemini client masquerading as Anthropic client with bounded retries for transient errors."""
+
+class GeminiLLMClient:
+    """Async Gemini client with bounded retries for transient errors."""
 
     def __init__(self, api_key: str | None = None, model: str | None = None) -> None:
         resolved_api_key = api_key or getenv("GEMINI_API_KEY")
@@ -80,16 +81,19 @@ class AnthropicLLMClient:
 
         raise RuntimeError("Text generation failed after retries.") from last_error
 
-    # Alias to match exactly what the prompt requested, just in case
     async def complete(self, system: str, user: str, max_tokens: int = 700) -> str:
         return await self.generate_text(system, user, max_tokens=max_tokens)
+
+
+# Backward-compatible alias for older imports that still reference the old name.
+AnthropicLLMClient = GeminiLLMClient
 
 
 async def test_connection():
     print("Testing Gemini connection...")
     try:
-        client = AnthropicLLMClient()
-        response = await client.generate_text("You are a helpful assistant.", "Say hello", max_tokens=50)
+        client = GeminiLLMClient()
+        response = await client.complete("You are a helpful assistant.", "Say hello", max_tokens=50)
         print(f"Response: {response}")
     except Exception as e:
         print(f"Failed: {e}")
