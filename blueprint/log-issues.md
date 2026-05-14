@@ -1,122 +1,195 @@
 <context>
-Task A has three confirmed bugs from terminal log analysis.
+We have three confirmed facts from ChromaDB inspection:
 
-Logs show:
-1. "[GENERATOR] Using fallback path — reason: LLM unavailable"
-   → GEMINI_API_KEY not being loaded
-   
-2. "[CHROMADB] Query result count: 0" for both candidate user IDs
-   → User ID format mismatch between stored reviews and query
+FACT 1 — User ID formats in ChromaDB:
+  users collection IDs:   "yelp__BcWyKQL16ndpBdggh2kNA"
+                          "amazon_A1K4G5YJDJQI6Q"  
+                          "goodreads_72256c964486efe75b008e875c661715"
+  (format: "{platform}_{original_id}" — original Yelp IDs start with "_")
 
-3. UserProfile returned from ChromaDB has review_history=[] and 
-   default fingerprint values (avg_rating=3.5, all defaults)
-   → Agent is building a blank UserProfile instead of reading 
-     the real stored fingerprint from metadata
+FACT 2 — Review metadata user_id field format:
+  Raw stored user_ids in reviews: ['yelp_IKbjLnfBQtEyVzEu8CuOLg', ...]
+  (format: "yelp_{original_id}" — consistent with users collection)
+  
+  Query for "yelp__BcWyKQL16ndpBdggh2kNA" → 0 results (no match)
+  Query for "_BcWyKQL16ndpBdggh2kNA"      → 3 results FOUND
+  This means: reviews for this user are stored with user_id 
+  metadata = "_BcWyKQL16ndpBdggh2kNA" (the original Yelp ID, 
+  no platform prefix in the metadata field)
+
+FACT 3 — API key is confirmed present in .env and readable by Python.
+  The LLM is still showing "LLM unavailable" — meaning llm_client.py 
+  is not reading the key at initialization time, likely because 
+  load_dotenv() is not called before os.getenv() in that file.
 
 Files to fix:
-[PASTE task_a/main.py]
-[PASTE task_a/agent.py]  
 [PASTE shared/llm_client.py]
 [PASTE shared/vector_store.py]
+[PASTE task_a/agent.py]
+[PASTE task_a/main.py]
 </context>
 
 <fixes>
 
-FIX 1 — Load .env before anything else in task_a/main.py
-At the very top of task_a/main.py, before all other imports:
+FIX 1 — shared/llm_client.py: load dotenv at module level
+Add these two lines at the very top, before any other imports:
   from dotenv import load_dotenv
   load_dotenv(override=True)
 
-Then add a startup log to confirm the key loaded:
-  import os
-  logger.info(f"GEMINI_API_KEY loaded: {'yes' if os.getenv('GEMINI_API_KEY') else 'NO - KEY MISSING'}")
-
-FIX 2 — In shared/llm_client.py, add the same dotenv load at top:
-  from dotenv import load_dotenv
-  load_dotenv(override=True)
-
-And add a clear error if key is missing:
+Then in the __init__ or wherever os.getenv("GEMINI_API_KEY") is called,
+add a startup assertion:
   api_key = os.getenv("GEMINI_API_KEY")
   if not api_key:
-      raise ValueError(
-          "GEMINI_API_KEY environment variable not set. "
-          "Add it to your .env file and restart the server."
+      raise RuntimeError(
+          "GEMINI_API_KEY is not set. "
+          "Ensure it exists in your .env file and load_dotenv() runs first."
       )
+  logger.info("[LLM] Gemini client initialized with key: %s...", api_key[:8])
 
-FIX 3 — In task_a/agent.py, fix UserProfile reconstruction from ChromaDB.
+FIX 2 — task_a/main.py: load dotenv at very top
+First two lines of the file (before all other imports):
+  from dotenv import load_dotenv
+  load_dotenv(override=True)
 
-Currently the agent fetches user metadata from ChromaDB but builds 
-a UserProfile with empty review_history and default fingerprint.
-The fix: when fetching a user from ChromaDB, reconstruct StyleFingerprint 
-from the stored metadata fields directly.
+FIX 3 — shared/vector_store.py: fix review query user_id matching
 
-In the method that fetches user from ChromaDB (likely fetch_user_profile 
-or similar), after getting metadata from ChromaDB:
+The review metadata stores user_id in TWO possible formats:
+  Format A: "yelp_IKbjLnfBQtEyVzEu8CuOLg"  (platform + original_id)
+  Format B: "_BcWyKQL16ndpBdggh2kNA"         (just original_id, for 
+             users whose original_id already started with "_")
 
-  metadata = chroma_result["metadatas"][0]
+The agent queries with the full ChromaDB document ID like:
+  "yelp__BcWyKQL16ndpBdggh2kNA"
+
+Fix the review query method to try ALL of these candidate 
+user_id values when filtering reviews:
+
+  def _build_user_id_candidates(self, chroma_user_id: str) -> list[str]:
+      """
+      Given a ChromaDB user document ID, returns all possible values
+      that the user_id metadata field in reviews might contain.
+      
+      ChromaDB user ID: "yelp__BcWyKQL16ndpBdggh2kNA"
+      Candidates to try:
+        1. "yelp__BcWyKQL16ndpBdggh2kNA"  (exact match)
+        2. "_BcWyKQL16ndpBdggh2kNA"        (strip "yelp_" prefix)
+        3. "yelp__BcWyKQL16ndpBdggh2kNA"   (already covered by 1)
+      """
+      candidates = [chroma_user_id]
+      
+      for platform in ("yelp_", "amazon_", "goodreads_"):
+          if chroma_user_id.startswith(platform):
+              stripped = chroma_user_id[len(platform):]
+              if stripped not in candidates:
+                  candidates.append(stripped)
+              # Also try re-adding platform prefix in case of double prefix
+              reprefixed = platform + stripped
+              if reprefixed not in candidates:
+                  candidates.append(reprefixed)
+      
+      return candidates
+
+  Then in the actual query method, loop through candidates:
   
-  # Rebuild fingerprint from stored metadata instead of defaulting
-  fingerprint = StyleFingerprint(
-      avg_rating=float(metadata.get("avg_rating", 3.5)),
-      rating_std=float(metadata.get("rating_std", 0.0)),
-      avg_review_length=float(metadata.get("avg_review_length", 60.0)),
-      vocabulary_size=int(metadata.get("vocabulary_size", 0)),
-      top_phrases=metadata.get("top_phrases", "").split(",") 
-                  if metadata.get("top_phrases") else [],
-      sentiment_profile={
-          "positive": float(metadata.get("sentiment_positive", 0.34)),
-          "neutral": float(metadata.get("sentiment_neutral", 0.33)),
-          "negative": float(metadata.get("sentiment_negative", 0.33)),
-      },
-      formality_score=float(metadata.get("formality_score", 0.5)),
-      nigerian_signals=metadata.get("nigerian_signals", "").split(",")
-                       if metadata.get("nigerian_signals") else [],
-  )
-
-Check what field names are actually stored in ChromaDB metadata by 
-looking at UserProfile.to_metadata() in shared/user_profile.py — 
-use those exact field names.
-
-FIX 4 — In shared/vector_store.py, fix the reviews query to handle 
-the yelp__ double-underscore user ID format.
-
-The stored review metadata user_id field may differ from the ChromaDB 
-document ID. Add a fallback query that searches without any platform prefix:
-
-  def query_reviews_for_user(self, user_id: str, category: str, n: int):
-      # Try exact match first
-      results = self._query_with_filter(user_id, category, n)
-      if results:
-          return results
+  def query_reviews_for_user(
+      self, user_id: str, query_text: str, n_results: int = 5
+  ) -> list[str]:
+      candidates = self._build_user_id_candidates(user_id)
+      logger.info("[CHROMADB] Trying %d user_id candidates: %s", 
+                  len(candidates), candidates)
       
-      # Try stripping known platform prefixes
-      for prefix in ("yelp_", "amazon_", "goodreads_"):
-          if user_id.startswith(prefix):
-              stripped = user_id[len(prefix):]
-              results = self._query_with_filter(stripped, category, n)
-              if results:
-                  return results
+      for candidate in candidates:
+          try:
+              results = self.query(
+                  collection_name="reviews",
+                  query_texts=[query_text],
+                  n_results=n_results,
+                  where={"user_id": candidate},
+              )
+              docs = results.get("documents", [[]])[0]
+              valid = [d for d in docs if d and str(d).strip()]
+              if valid:
+                  logger.info("[CHROMADB] Found %d reviews with candidate: %s",
+                              len(valid), candidate)
+                  return valid
+          except Exception as e:
+              logger.warning("[CHROMADB] Query failed for candidate %s: %s", 
+                           candidate, e)
+              continue
       
+      logger.warning("[CHROMADB] No reviews found for any candidate of: %s", 
+                     user_id)
       return []
 
-FIX 5 — Verify python-dotenv is installed
-Add to task_a/requirements.txt if not already present:
-  python-dotenv>=1.0.0
-</fixes>
+FIX 4 — task_a/agent.py: use real ChromaDB metadata to rebuild fingerprint
 
-<verification>
-After fixes, the terminal should show these log lines on next request:
-  "GEMINI_API_KEY loaded: yes"
-  "[GENERATOR] Using LLM path"  
-  "[GENERATOR] System prompt length: [number > 500]"
-  "[GENERATOR] Raw LLM output: [actual generated text, not template]"
+When the agent fetches a user from ChromaDB and the user exists,
+it must rebuild StyleFingerprint from stored metadata, not defaults.
+
+After fetching user metadata from ChromaDB users collection:
   
-And the response review_text should NOT start with "I tried" and 
-should be 3-5 sentences of natural language.
-</verification>
+  from shared.user_profile import StyleFingerprint, UserProfile
+  
+  meta = chroma_result["metadatas"][0]  # actual field name may vary
+  
+  # Parse top_phrases from comma-separated string
+  raw_phrases = meta.get("top_phrases", "") or ""
+  top_phrases = [p.strip() for p in raw_phrases.split(",") if p.strip()]
+  
+  # Parse nigerian_signals from comma-separated string  
+  raw_signals = meta.get("nigerian_signals", "") or ""
+  nigerian_signals = [s.strip() for s in raw_signals.split(",") if s.strip()]
+  
+  # Parse preferred_categories
+  raw_cats = meta.get("preferred_categories", "") or ""
+  preferred_categories = [c.strip() for c in raw_cats.split(",") if c.strip()]
+  
+  fingerprint = StyleFingerprint(
+      avg_rating=float(meta.get("avg_rating", 3.5)),
+      rating_std=float(meta.get("rating_std", 0.0)),
+      avg_review_length=float(meta.get("avg_review_length", 60.0)),
+      vocabulary_size=int(meta.get("vocabulary_size", 0)),
+      top_phrases=top_phrases,
+      sentiment_profile={
+          "positive": float(meta.get("sentiment_positive", 0.34)),
+          "neutral":  float(meta.get("sentiment_neutral",  0.33)),
+          "negative": float(meta.get("sentiment_negative", 0.33)),
+      },
+      formality_score=float(meta.get("formality_score", 0.5)),
+      nigerian_signals=nigerian_signals,
+  )
+  
+  NOTE: Check UserProfile.to_metadata() in shared/user_profile.py for 
+  the EXACT field names stored — use those exactly. The sentiment fields 
+  may be stored as "sentiment_positive" or just inside a nested dict.
+  Match whatever to_metadata() actually writes.
+
+  Add this log after rebuilding:
+  logger.info("[AGENT] Rebuilt fingerprint from ChromaDB: avg_rating=%s, 
+              review_count=%s, vocab=%s",
+              fingerprint.avg_rating,
+              meta.get("review_count"),
+              fingerprint.vocabulary_size)
 
 <constraints>
-- load_dotenv() must be called before any os.getenv() calls
-- Do not change request/response schemas
+- load_dotenv(override=True) must be the first thing that runs 
+  in both main.py and llm_client.py
+- Do not change any request/response schemas
+- The query_reviews_for_user method must be the single point of 
+  truth for review retrieval — update all callers to use it
 - Output all changed files in full with path headers
+- No truncation
 </constraints>
+
+<expected_terminal_after_fix>
+INFO: [LLM] Gemini client initialized with key: AIzaSy...
+INFO: [AGENT] Starting for user: yelp__BcWyKQL16ndpBdggh2kNA
+INFO: [AGENT] Rebuilt fingerprint from ChromaDB: avg_rating=4.2, 
+              review_count=65, vocab=1847
+INFO: [CHROMADB] Trying 2 user_id candidates: ['yelp__BcWyKQL16ndpBdggh2kNA', 
+                 '_BcWyKQL16ndpBdggh2kNA']
+INFO: [CHROMADB] Found 5 reviews with candidate: _BcWyKQL16ndpBdggh2kNA
+INFO: [GENERATOR] Using LLM path
+INFO: [GENERATOR] Few-shot examples count: 5
+INFO: [GENERATOR] Raw LLM output: Honestly this place caught me off guard...
+</expected_terminal_after_fix>

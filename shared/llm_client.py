@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from dotenv import load_dotenv
+load_dotenv(override=True)
+
 import asyncio
 import logging
 from os import getenv
@@ -19,11 +22,15 @@ class GeminiLLMClient:
     def __init__(self, api_key: str | None = None, model: str | None = None) -> None:
         resolved_api_key = api_key or getenv("GEMINI_API_KEY")
         if not resolved_api_key:
-            raise ValueError("GEMINI_API_KEY environment variable is required.")
+            raise RuntimeError(
+                "GEMINI_API_KEY is not set. "
+                "Ensure it exists in your .env file and load_dotenv() runs first."
+            )
         
         self.client = genai.Client(api_key=resolved_api_key)
         self.model = "gemini-2.5-flash"
         self.free_tier_mode = getenv("FREE_TIER_MODE", "false").lower() == "true"
+        logger.info("[LLM] Gemini client initialized with key: %s...", resolved_api_key[:8])
 
     async def generate_text(
         self,

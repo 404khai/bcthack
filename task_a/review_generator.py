@@ -102,23 +102,11 @@ class ReviewGenerator:
             if local_examples:
                 return local_examples[:limit]
 
-        candidate_user_ids = self._candidate_user_ids(user_profile)
-        for candidate_user_id in candidate_user_ids:
-            try:
-                results = self.vector_store.query(
-                    collection_name="reviews",
-                    query_texts=[item_category],
-                    n_results=max(3, min(limit, 5)),
-                    where={"user_id": candidate_user_id},
-                )
-            except Exception:
-                continue
-
-            documents = results.get("documents", [[]])
-            if documents and documents[0]:
-                return [str(document).strip() for document in documents[0][:limit] if str(document).strip()]
-
-        return []
+        return self.vector_store.query_reviews_for_user(
+            user_id=user_profile.user_id,
+            query_text=item_category,
+            n_results=max(3, min(limit, 5)),
+        )[:limit]
 
     def _get_llm_client(self) -> GeminiLLMClient | None:
         if self._llm_client is not None:
@@ -183,20 +171,6 @@ class ReviewGenerator:
         )
         adapter = NigerianContextAdapter(enabled=nigerian_mode)
         return await adapter.adapt_review(review_text.strip(), intensity=nigerian_intensity)
-
-    def _candidate_user_ids(self, user_profile: UserProfile) -> list[str]:
-        """Builds possible ChromaDB user identifiers for review retrieval."""
-        uid = user_profile.user_id
-        platform = user_profile.platform
-        candidates = [uid]
-
-        if not uid.startswith(f"{platform}_"):
-            candidates.append(f"{platform}_{uid}")
-
-        if uid.startswith(f"{platform}_"):
-            candidates.append(uid[len(platform) + 1 :])
-
-        return candidates
 
     def _format_examples(self, example_reviews: list[str]) -> str:
         """Formats few-shot examples clearly for the prompt."""

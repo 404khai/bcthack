@@ -24,15 +24,15 @@ RESPONSE
 {
   "user_id": "yelp__BcWyKQL16ndpBdggh2kNA",
   "item_id": "yelp_8c0r7olQSYGcws0bTd3ikw",
-  "rating": 3.9,
-  "review_text": "I tried Zesty Tsunami in the Hawaiian category and found it fairly balanced. What stood out most was price range: mid-range, location: Las Vegas, cuisine: Hawaiian Fusion. It matches the kind of measured reaction I tend to have.",
-  "confidence": 0.453,
-  "style_notes": "Avg rating 3.50, rating std 0.00, avg length 60.0 words, formality 0.50, top phrases: no repeated phrases, Nigerian signals: none detected.",
+  "rating": 3.5,
+  "review_text": "Zesty Tsunami was a decent stop for some Hawaiian Fusion in Las Vegas. The menu had",
+  "confidence": 0.283,
+  "style_notes": "Avg rating 3.62, rating std 0.00, avg length 78.1 words, formality 0.50, top phrases: no repeated phrases, Nigerian signals: none detected.",
   "style_fingerprint": {
-    "avg_rating": 3.5,
+    "avg_rating": 3.615,
     "rating_std": 0,
-    "avg_review_length": 60,
-    "vocabulary_size": 0,
+    "avg_review_length": 78.09,
+    "vocabulary_size": 1632,
     "top_phrases": [],
     "sentiment_profile": {
       "positive": 0.34,
@@ -71,15 +71,15 @@ RESPONSE
 {
   "user_id": "yelp__BcWyKQL16ndpBdggh2kNA",
   "item_id": "new_item_002",
-  "rating": 3.9,
-  "review_text": "I tried Chicken Republic Lekki in the Fast Food category and found it fairly balanced. What stood out most was price range: budget, location: Lagos, cuisine: Nigerian Fast Food. It matches the kind of measured reaction I tend to have.",
-  "confidence": 0.468,
-  "style_notes": "Avg rating 3.50, rating std 0.00, avg length 60.0 words, formality 0.50, top phrases: no repeated phrases, Nigerian signals: none detected.",
+  "rating": 3.5,
+  "review_text": "I was in Lekki and just needed something quick to eat, so",
+  "confidence": 0.26,
+  "style_notes": "Avg rating 3.62, rating std 0.00, avg length 78.1 words, formality 0.50, top phrases: no repeated phrases, Nigerian signals: none detected.",
   "style_fingerprint": {
-    "avg_rating": 3.5,
+    "avg_rating": 3.615,
     "rating_std": 0,
-    "avg_review_length": 60,
-    "vocabulary_size": 0,
+    "avg_review_length": 78.09,
+    "vocabulary_size": 1632,
     "top_phrases": [],
     "sentiment_profile": {
       "positive": 0.34,
@@ -118,15 +118,15 @@ RESPONSE
 {
   "user_id": "amazon_A1K4G5YJDJQI6Q",
   "item_id": "new_item_003",
-  "rating": 3.9,
-  "review_text": "I tried Anker PowerBank 20000mAh in the Electronics category and found it fairly balanced. What stood out most was price_range=mid-range, brand=Anker, use_case=charging. It matches the kind of measured reaction I tend to have.",
-  "confidence": 0.416,
-  "style_notes": "Avg rating 3.50, rating std 0.00, avg length 60.0 words, formality 0.50, top phrases: no repeated phrases, Nigerian signals: none detected.",
+  "rating": 3.5,
+  "review_text": "I picked up the Anker PowerBank 20000mAh hoping for a",
+  "confidence": 0.16,
+  "style_notes": "Avg rating 2.80, rating std 0.00, avg length 285.8 words, formality 0.50, top phrases: no repeated phrases, Nigerian signals: none detected.",
   "style_fingerprint": {
-    "avg_rating": 3.5,
+    "avg_rating": 2.8,
     "rating_std": 0,
-    "avg_review_length": 60,
-    "vocabulary_size": 0,
+    "avg_review_length": 285.8,
+    "vocabulary_size": 1788,
     "top_phrases": [],
     "sentiment_profile": {
       "positive": 0.34,
@@ -138,7 +138,3 @@ RESPONSE
   },
   "nigerian_mode": false
 }
-
-- I DO NOT STILL SEE ANY NOTICEABLE DIFFERENCE BETWEEN THE TWO TESTS, ESPECIALLY REGARDING THE NIGERIAN MODE, DESPITE CHANGES MADE.
-- AND why does it now display responses in this format, is this how it is meant to be displayed?
-  - What stood out most was price range: budget, location: Lagos, cuisine: Nigerian Fast Food
