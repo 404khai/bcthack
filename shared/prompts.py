@@ -4,26 +4,32 @@
 # TASK A PROMPTS
 # ==============================================================================
 
-TASK_A_REVIEW_SYSTEM = """You are simulating a real user's review style for a recommendation hackathon benchmark.
+TASK_A_REVIEW_SYSTEM = """You are writing as a specific real user, not describing what the user might say.
 
-Match the user's style fingerprint closely:
-- Average review length target: {min_words}-{max_words} words
-- Formality score target: {formality_score}
+User behavior snapshot:
+- Average rating: {avg_rating}
+- Rating variability: {rating_std}
+- Target review length: {min_words}-{max_words} words
+- Formality score: {formality_score}
 - Sentiment distribution: {sentiment_distribution}
-- Vocabulary size target: approximately {vocabulary_size} unique tokens across their corpus
-- Common phrases to echo naturally when appropriate: {top_phrases}
-- Nigerian signals seen historically: {nigerian_signals}
+- Vocabulary size: approximately {vocabulary_size} unique tokens
+- Common phrases the user naturally repeats: {top_phrases}
+- Nigerian signals previously seen: {nigerian_signals}
+- Preferred categories: {preferred_categories}
+- History count: {history_count}
 
-Instructions:
-1. Write a single review in first-person if the examples suggest it.
-2. Match the user's tone, sentence length, and lexical richness.
-3. Reflect the user's historical sentiment balance instead of writing generic praise.
-4. Mention item attributes only when they sound natural in a user review.
-5. Do not mention that you are an AI or that you were given style instructions.
-6. Output review text only.
+Writing rules:
+1. Write a single natural review as if you ARE the user.
+2. Use the example reviews as style anchors for tone, pacing, specificity, and sentence rhythm.
+3. Do not produce templated phrasing or explain the writing style.
+4. Do not start with "I tried" or "I visited". Vary the opening naturally.
+5. Mention item attributes only when they fit naturally into the review.
+6. Match the user's likely sentiment and level of detail, not generic positivity.
+7. If the user has fewer than 3 historical reviews, write a balanced, natural review for the item category while still sounding human and specific.
+8. Output review text only.
 """
 
-TASK_A_REVIEW_USER = """User profile summary:
+TASK_A_REVIEW_USER = """User profile:
 - User ID: {user_id}
 - Platform: {platform}
 - Preferred categories: {preferred_categories}
@@ -34,10 +40,10 @@ Target item:
 - Category: {item_category}
 - Attributes: {item_attributes}
 
-Few-shot context from similar reviews:
+Here are examples of how this user writes:
 {example_reviews}
 
-Write a realistic user review for the target item.
+Write the review now in the user's voice. Make the opening feel natural and varied.
 """
 
 TASK_A_RATING_SYSTEM = """You are estimating the most likely star rating a user would assign to an item.
@@ -157,10 +163,16 @@ Original text:
 {text}
 """
 
-NIGERIAN_ADAPT_MEDIUM = """You are a cultural adapter. Adapt the following text to have a moderate Nigerian flavor.
-Do not change the core meaning. Adjust the tone to be warm and practical, and include 3-4 local references (e.g. foods like suya/jollof, places like Lagos/Abuja, or retailers).
-Make it sound authentically Nigerian without stereotypes.
-Return ONLY the adapted text.
+NIGERIAN_ADAPT_MEDIUM = """You are rewriting a review so it sounds like a Nigerian person wrote it.
+
+Instructions:
+- Keep the same core sentiment, meaning, and rating logic.
+- Rewrite the review in a warm, direct, practical Nigerian tone.
+- Add 2-3 natural Nigerian context references such as local food comparisons, Lagos references, value-for-money consciousness, or everyday city-life framing.
+- Do NOT use Pidgin at medium intensity.
+- Do NOT sound stereotyped, forced, or comedic.
+- The output should read like a real review from an urban Nigerian reviewer.
+- Return ONLY the rewritten review text.
 
 Original text:
 {text}

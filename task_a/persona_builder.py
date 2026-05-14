@@ -54,11 +54,12 @@ class PersonaBuilder:
         ]
         fingerprint = build_style_fingerprint(records)
         merged_signals = sorted(set(fingerprint.nigerian_signals) | self._detect_nigerian_signals(review_history))
+        vocabulary_size = self._compute_vocabulary_size(review_history)
         return StyleFingerprint(
             avg_rating=fingerprint.avg_rating,
             rating_std=fingerprint.rating_std,
             avg_review_length=fingerprint.avg_review_length,
-            vocabulary_size=fingerprint.vocabulary_size,
+            vocabulary_size=vocabulary_size,
             top_phrases=fingerprint.top_phrases,
             sentiment_profile=fingerprint.sentiment_profile,
             formality_score=fingerprint.formality_score,
@@ -77,3 +78,13 @@ class PersonaBuilder:
             token_counter.update(tokens)
         candidates = set(token_counter) & (PIDGIN_TERMS | LOCAL_REFERENCES)
         return candidates
+
+    def _compute_vocabulary_size(self, review_history: Iterable[ReviewHistoryEntry]) -> int:
+        """Counts unique lowercase words across the user's review history."""
+        all_words = [
+            word.lower()
+            for review in review_history
+            for word in review.text.split()
+            if word.strip()
+        ]
+        return len(set(all_words))

@@ -1,6 +1,9 @@
-"""Gemini SDK wrapper with simple retry logic, retaining original Anthropic interface."""
+"""Gemini SDK wrapper with simple retry logic."""
 
 from __future__ import annotations
+
+from dotenv import load_dotenv
+load_dotenv(override=True)
 
 import asyncio
 import logging
@@ -12,17 +15,22 @@ from google.api_core.exceptions import ResourceExhausted
 
 logger = logging.getLogger(__name__)
 
-class AnthropicLLMClient:
-    """Async Gemini client masquerading as Anthropic client with bounded retries for transient errors."""
+
+class GeminiLLMClient:
+    """Async Gemini client with bounded retries for transient errors."""
 
     def __init__(self, api_key: str | None = None, model: str | None = None) -> None:
         resolved_api_key = api_key or getenv("GEMINI_API_KEY")
         if not resolved_api_key:
-            raise ValueError("GEMINI_API_KEY environment variable is required.")
+            raise RuntimeError(
+                "GEMINI_API_KEY is not set. "
+                "Ensure it exists in your .env file and load_dotenv() runs first."
+            )
         
         self.client = genai.Client(api_key=resolved_api_key)
         self.model = "gemini-2.5-flash"
         self.free_tier_mode = getenv("FREE_TIER_MODE", "false").lower() == "true"
+        logger.info("[LLM] Gemini client initialized with key: %s...", resolved_api_key[:8])
 
     async def generate_text(
         self,
@@ -80,16 +88,19 @@ class AnthropicLLMClient:
 
         raise RuntimeError("Text generation failed after retries.") from last_error
 
-    # Alias to match exactly what the prompt requested, just in case
     async def complete(self, system: str, user: str, max_tokens: int = 700) -> str:
         return await self.generate_text(system, user, max_tokens=max_tokens)
+
+
+# Backward-compatible alias for older imports that still reference the old name.
+AnthropicLLMClient = GeminiLLMClient
 
 
 async def test_connection():
     print("Testing Gemini connection...")
     try:
-        client = AnthropicLLMClient()
-        response = await client.generate_text("You are a helpful assistant.", "Say hello", max_tokens=50)
+        client = GeminiLLMClient()
+        response = await client.complete("You are a helpful assistant.", "Say hello", max_tokens=50)
         print(f"Response: {response}")
     except Exception as e:
         print(f"Failed: {e}")

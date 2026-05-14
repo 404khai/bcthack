@@ -6,7 +6,8 @@ from __future__ import annotations
 import logging
 from time import perf_counter
 
-from shared.user_profile import ReviewRecord, UserProfile
+from shared.user_profile import ReviewRecord, StyleFingerprint, UserProfile
+from shared.vector_store import VectorStore
 from task_a.persona_builder import PersonaBuilder
 from task_a.rating_predictor import RatingPredictor
 from task_a.review_generator import ReviewGenerator
@@ -19,37 +20,65 @@ class UserModelingAgent:
     """Coordinates persona analysis, review generation, and rating prediction."""
 
     def __init__(self) -> None:
+        self.vector_store = VectorStore()
         self.persona_builder = PersonaBuilder()
-        self.review_generator = ReviewGenerator()
+        self.review_generator = ReviewGenerator(vector_store=self.vector_store)
         self.rating_predictor = RatingPredictor()
 
     async def run(self, request: ReviewRequest) -> ReviewResponse:
         """Runs the full Task A pipeline and logs the duration of each step."""
         timings: dict[str, float] = {}
+        logger.info("[AGENT] Starting for user: %s", request.user_persona.user_id)
 
         start = perf_counter()
+        chroma_user = self.vector_store.get_by_id("users", request.user_persona.user_id)
+        logger.info("[AGENT] ChromaDB fetch result: %s", chroma_user)
         review_history = self._build_review_records(request)
-        style_fingerprint = self.persona_builder.build(
-            request.user_persona.user_id,
-            request.user_persona.review_history,
-        )
+        if chroma_user is not None:
+            style_fingerprint = self._rebuild_fingerprint_from_chroma(chroma_user["metadata"])
+            preferred_categories = self._preferred_categories_from_metadata(
+                chroma_user["metadata"],
+                request,
+            )
+        else:
+            style_fingerprint = self.persona_builder.build(
+                request.user_persona.user_id,
+                request.user_persona.review_history,
+            )
+            preferred_categories = self._preferred_categories(request.user_persona)
+        logger.info("[AGENT] Style fingerprint: %s", style_fingerprint)
         user_profile = UserProfile(
             user_id=request.user_persona.user_id,
             platform=request.user_persona.platform,
             review_history=review_history,
             style_fingerprint=style_fingerprint,
-            preferred_categories=self._preferred_categories(request.user_persona),
-            metadata={"preferences": request.user_persona.preferences},
+            preferred_categories=preferred_categories,
+            metadata=self._merged_metadata(chroma_user, request),
         )
         timings["persona_builder"] = perf_counter() - start
 
         start = perf_counter()
+        prompt = (
+            f"user_id={request.user_persona.user_id}; "
+            f"platform={request.user_persona.platform}; "
+            f"item={request.item_details.name}; "
+            f"category={request.item_details.category}; "
+            f"attrs={request.item_details.attributes}"
+        )
+        logger.info("[AGENT] Calling LLM with prompt length: %s", len(prompt))
+        will_call_adapter = request.nigerian_mode
+        logger.info(
+            "[AGENT] Nigerian mode: %s, calling adapter: %s",
+            request.nigerian_mode,
+            will_call_adapter,
+        )
         review_text = await self.review_generator.generate(
             user_profile,
             request.item_details,
             nigerian_mode=request.nigerian_mode,
             nigerian_intensity=getattr(request, "nigerian_intensity", "medium"),
         )
+        logger.info("[AGENT] LLM response received: %s", review_text[:100])
         timings["review_generator"] = perf_counter() - start
 
         start = perf_counter()
@@ -91,6 +120,56 @@ class UserModelingAgent:
             )
             for index, entry in enumerate(request.user_persona.review_history, start=1)
         ]
+
+    def _rebuild_fingerprint_from_chroma(self, metadata: dict) -> StyleFingerprint:
+        sentiment_profile = metadata.get("sentiment_profile")
+        if not isinstance(sentiment_profile, dict):
+            sentiment_profile = {
+                "positive": float(metadata.get("sentiment_positive", 0.34)),
+                "neutral": float(metadata.get("sentiment_neutral", 0.33)),
+                "negative": float(metadata.get("sentiment_negative", 0.33)),
+            }
+
+        fingerprint = StyleFingerprint(
+            avg_rating=float(metadata.get("avg_rating", 3.5)),
+            rating_std=float(metadata.get("rating_std", 0.0)),
+            avg_review_length=float(metadata.get("avg_review_length", 60.0)),
+            vocabulary_size=int(metadata.get("vocabulary_size", 0)),
+            top_phrases=self._split_metadata_list(metadata.get("top_phrases", "")),
+            sentiment_profile={
+                "positive": float(sentiment_profile.get("positive", 0.34)),
+                "neutral": float(sentiment_profile.get("neutral", 0.33)),
+                "negative": float(sentiment_profile.get("negative", 0.33)),
+            },
+            formality_score=float(metadata.get("formality_score", 0.5)),
+            nigerian_signals=self._split_metadata_list(metadata.get("nigerian_signals", "")),
+        )
+        logger.info(
+            "[AGENT] Rebuilt fingerprint from ChromaDB: avg_rating=%s, review_count=%s, vocab=%s",
+            fingerprint.avg_rating,
+            metadata.get("review_count"),
+            fingerprint.vocabulary_size,
+        )
+        return fingerprint
+
+    def _preferred_categories_from_metadata(self, metadata: dict, request: ReviewRequest) -> list[str]:
+        categories = self._split_metadata_list(metadata.get("preferred_categories", ""))
+        if categories:
+            return categories
+        return self._preferred_categories(request.user_persona)
+
+    def _merged_metadata(self, chroma_user: dict | None, request: ReviewRequest) -> dict:
+        merged: dict = {"preferences": request.user_persona.preferences}
+        if chroma_user is not None:
+            merged.update(chroma_user.get("metadata", {}))
+        return merged
+
+    def _split_metadata_list(self, raw_value: object) -> list[str]:
+        if isinstance(raw_value, list):
+            return [str(item).strip() for item in raw_value if str(item).strip()]
+        if isinstance(raw_value, str):
+            return [part.strip() for part in raw_value.split(",") if part.strip()]
+        return []
 
     def _preferred_categories(self, persona) -> list[str]:
         categories = persona.preferences.get("favorite_categories")
