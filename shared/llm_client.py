@@ -37,7 +37,7 @@ class GeminiLLMClient:
         system_prompt: str,
         user_prompt: str,
         *,
-        max_tokens: int = 700,
+        max_tokens: int = 1024,
         temperature: float = 0.3,
         retries: int = 3,
     ) -> str:
@@ -61,7 +61,18 @@ class GeminiLLMClient:
                     )
 
                 response = await asyncio.to_thread(_generate)
-                return response.text
+                full_text = response.text or ""
+                finish_reason = None
+                candidates = getattr(response, "candidates", None) or []
+                if candidates:
+                    finish_reason = getattr(candidates[0], "finish_reason", None)
+                logger.info("[LLM] Finish reason: %s", finish_reason)
+                logger.info("[LLM] Full response length: %d chars", len(full_text))
+                if str(finish_reason) == "MAX_TOKENS":
+                    logger.warning(
+                        "[LLM] Response was cut short by token limit. Increase max_output_tokens."
+                    )
+                return full_text
             except ResourceExhausted as error:
                 last_error = error
                 if attempt == retries:
@@ -88,7 +99,7 @@ class GeminiLLMClient:
 
         raise RuntimeError("Text generation failed after retries.") from last_error
 
-    async def complete(self, system: str, user: str, max_tokens: int = 700) -> str:
+    async def complete(self, system: str, user: str, max_tokens: int = 1024) -> str:
         return await self.generate_text(system, user, max_tokens=max_tokens)
 
 
