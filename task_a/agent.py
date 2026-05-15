@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from time import perf_counter
 
 from shared.user_profile import ReviewRecord, StyleFingerprint, UserProfile
@@ -35,7 +36,7 @@ class UserModelingAgent:
         logger.info("[AGENT] ChromaDB fetch result: %s", chroma_user)
         review_history = self._build_review_records(request)
         if chroma_user is not None:
-            style_fingerprint = self._rebuild_fingerprint_from_chroma(chroma_user["metadata"])
+            style_fingerprint = self._rebuild_fingerprint_from_chroma(chroma_user)
             preferred_categories = self._preferred_categories_from_metadata(
                 chroma_user["metadata"],
                 request,
@@ -78,7 +79,11 @@ class UserModelingAgent:
             nigerian_mode=request.nigerian_mode,
             nigerian_intensity=getattr(request, "nigerian_intensity", "medium"),
         )
-        logger.info("[AGENT] LLM response received: %s", review_text[:100])
+        logger.info(
+            "[AGENT] LLM response received (%d chars): %s",
+            len(review_text),
+            review_text[:300],
+        )
         timings["review_generator"] = perf_counter() - start
 
         start = perf_counter()
@@ -121,7 +126,9 @@ class UserModelingAgent:
             for index, entry in enumerate(request.user_persona.review_history, start=1)
         ]
 
-    def _rebuild_fingerprint_from_chroma(self, metadata: dict) -> StyleFingerprint:
+    def _rebuild_fingerprint_from_chroma(self, chroma_user: dict) -> StyleFingerprint:
+        metadata = chroma_user.get("metadata", {})
+        document_text = chroma_user.get("document", "") or ""
         sentiment_profile = metadata.get("sentiment_profile")
         if not isinstance(sentiment_profile, dict):
             sentiment_profile = {
@@ -130,18 +137,44 @@ class UserModelingAgent:
                 "negative": float(metadata.get("sentiment_negative", 0.33)),
             }
 
+        rating_std = self._parse_float_from_document(
+            pattern=r"rating deviation ([\d.]+)",
+            document_text=document_text,
+            default=float(metadata.get("rating_std", 0.0)),
+        )
+        formality_score = self._parse_float_from_document(
+            pattern=r"formality ([\d.]+)",
+            document_text=document_text,
+            default=float(metadata.get("formality_score", 0.5)),
+        )
+
+        top_phrases = self._split_metadata_list(metadata.get("top_phrases", ""))
+        if not top_phrases:
+            phrases_match = re.search(r"Top phrases: ([^.]+)\.", document_text)
+            if phrases_match:
+                top_phrases = [
+                    phrase.strip()
+                    for phrase in phrases_match.group(1).split(",")
+                    if phrase.strip() and phrase.strip().lower() != "none"
+                ]
+
+        for key in ("positive", "neutral", "negative"):
+            match = re.search(rf"{key}=([\d.]+)", document_text)
+            if match:
+                sentiment_profile[key] = float(match.group(1))
+
         fingerprint = StyleFingerprint(
             avg_rating=float(metadata.get("avg_rating", 3.5)),
-            rating_std=float(metadata.get("rating_std", 0.0)),
+            rating_std=rating_std,
             avg_review_length=float(metadata.get("avg_review_length", 60.0)),
             vocabulary_size=int(metadata.get("vocabulary_size", 0)),
-            top_phrases=self._split_metadata_list(metadata.get("top_phrases", "")),
+            top_phrases=top_phrases,
             sentiment_profile={
                 "positive": float(sentiment_profile.get("positive", 0.34)),
                 "neutral": float(sentiment_profile.get("neutral", 0.33)),
                 "negative": float(sentiment_profile.get("negative", 0.33)),
             },
-            formality_score=float(metadata.get("formality_score", 0.5)),
+            formality_score=formality_score,
             nigerian_signals=self._split_metadata_list(metadata.get("nigerian_signals", "")),
         )
         logger.info(
@@ -151,6 +184,10 @@ class UserModelingAgent:
             fingerprint.vocabulary_size,
         )
         return fingerprint
+
+    def _parse_float_from_document(self, pattern: str, document_text: str, default: float) -> float:
+        match = re.search(pattern, document_text)
+        return float(match.group(1)) if match else default
 
     def _preferred_categories_from_metadata(self, metadata: dict, request: ReviewRequest) -> list[str]:
         categories = self._split_metadata_list(metadata.get("preferred_categories", ""))

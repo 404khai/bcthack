@@ -76,9 +76,13 @@ class ReviewGenerator:
                 review_text = await client.complete(
                     system=system_prompt,
                     user=user_prompt,
-                    max_tokens=500,
+                    max_tokens=1024,
                 )
-                logger.info("[GENERATOR] Raw LLM output: %s", review_text[:200])
+                logger.info(
+                    "[GENERATOR] Raw LLM output (%d chars): %s",
+                    len(review_text),
+                    review_text[:300],
+                )
                 return await self._adapt_output(review_text, nigerian_mode, nigerian_intensity)
             except Exception as e:
                 logger.error("[GENERATOR] LLM call failed: %s", e, exc_info=True)

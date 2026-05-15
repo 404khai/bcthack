@@ -1,195 +1,134 @@
 <context>
-We have three confirmed facts from ChromaDB inspection:
+Three bugs remain in Task A after latest fixes.
 
-FACT 1 — User ID formats in ChromaDB:
-  users collection IDs:   "yelp__BcWyKQL16ndpBdggh2kNA"
-                          "amazon_A1K4G5YJDJQI6Q"  
-                          "goodreads_72256c964486efe75b008e875c661715"
-  (format: "{platform}_{original_id}" — original Yelp IDs start with "_")
+BUG 1 — Nigerian adapter truncates review (critical)
+The NigerianContextAdapter makes a second LLM call to adapt the review.
+This second call is truncating the output to ~15 words.
 
-FACT 2 — Review metadata user_id field format:
-  Raw stored user_ids in reviews: ['yelp_IKbjLnfBQtEyVzEu8CuOLg', ...]
-  (format: "yelp_{original_id}" — consistent with users collection)
-  
-  Query for "yelp__BcWyKQL16ndpBdggh2kNA" → 0 results (no match)
-  Query for "_BcWyKQL16ndpBdggh2kNA"      → 3 results FOUND
-  This means: reviews for this user are stored with user_id 
-  metadata = "_BcWyKQL16ndpBdggh2kNA" (the original Yelp ID, 
-  no platform prefix in the metadata field)
+Evidence from terminal logs:
+  First LLM call generates full review text
+  Second call (adapter) overwrites it with truncated version
+  "I was in Lekki and just needed something quick to eat, so" — cuts mid-sentence
 
-FACT 3 — API key is confirmed present in .env and readable by Python.
-  The LLM is still showing "LLM unavailable" — meaning llm_client.py 
-  is not reading the key at initialization time, likely because 
-  load_dotenv() is not called before os.getenv() in that file.
+Also terminal logs didn't show up in my latest test run, look into that minor issue as well
+The adapter's LLM call almost certainly has max_tokens set too low,
+likely 100-200. It needs to be at least 1024.
+
+BUG 2 — All reviews truncate mid-sentence (moderate)
+Even without Nigerian mode, reviews end abruptly:
+  "the overall flavor profile was a bit understated"  ← no period, cuts off
+  "keeping my devices"  ← cuts off mid-thought
+
+This means the first LLM call also hits its token limit.
+The fix from last round set max_tokens=1024 on the generator call
+but may not have updated the underlying llm_client default.
+
+BUG 3 — Fingerprint fields still showing defaults (minor)
+Despite the document text containing real values:
+  "rating deviation 1.02, formality 0.48, 
+   positive=0.74, neutral=0.23, negative=0.03"
+The response still shows:
+  rating_std: 0, formality_score: 0.5, 
+  sentiment: {positive:0.34, neutral:0.33, negative:0.33}
+
+The regex parsing from last fix is not running or not matching.
 
 Files to fix:
-[PASTE shared/llm_client.py]
-[PASTE shared/vector_store.py]
-[PASTE task_a/agent.py]
-[PASTE task_a/main.py]
+shared/nigerian_adapter.py
+shared/llm_client.py
+task_a/agent.py
 </context>
 
 <fixes>
 
-FIX 1 — shared/llm_client.py: load dotenv at module level
-Add these two lines at the very top, before any other imports:
-  from dotenv import load_dotenv
-  load_dotenv(override=True)
+FIX 1 — shared/nigerian_adapter.py: increase token limit on adapter call
 
-Then in the __init__ or wherever os.getenv("GEMINI_API_KEY") is called,
-add a startup assertion:
-  api_key = os.getenv("GEMINI_API_KEY")
-  if not api_key:
-      raise RuntimeError(
-          "GEMINI_API_KEY is not set. "
-          "Ensure it exists in your .env file and load_dotenv() runs first."
-      )
-  logger.info("[LLM] Gemini client initialized with key: %s...", api_key[:8])
+Find every call to the LLM inside NigerianContextAdapter.adapt_review()
+and change max_tokens to 1024 minimum.
 
-FIX 2 — task_a/main.py: load dotenv at very top
-First two lines of the file (before all other imports):
-  from dotenv import load_dotenv
-  load_dotenv(override=True)
+Also add these log lines to the adapter:
+  logger.info("[NIGERIAN] Input review length: %d chars", len(review_text))
+  logger.info("[NIGERIAN] Output review length: %d chars", len(adapted))
+  logger.info("[NIGERIAN] LLM finish reason: %s", finish_reason)
 
-FIX 3 — shared/vector_store.py: fix review query user_id matching
+The adapter prompt must also explicitly instruct the model:
+  "Write a COMPLETE review of similar length to the input. 
+   Do not truncate. End with a complete sentence."
 
-The review metadata stores user_id in TWO possible formats:
-  Format A: "yelp_IKbjLnfBQtEyVzEu8CuOLg"  (platform + original_id)
-  Format B: "_BcWyKQL16ndpBdggh2kNA"         (just original_id, for 
-             users whose original_id already started with "_")
+FIX 2 — shared/llm_client.py: set hard minimum on max_output_tokens
 
-The agent queries with the full ChromaDB document ID like:
-  "yelp__BcWyKQL16ndpBdggh2kNA"
+In the generate_text / complete / call method, enforce:
+  effective_max_tokens = max(max_tokens, 1024)
 
-Fix the review query method to try ALL of these candidate 
-user_id values when filtering reviews:
+And log the actual value being sent:
+  logger.info("[LLM] Sending request: max_output_tokens=%d", effective_max_tokens)
 
-  def _build_user_id_candidates(self, chroma_user_id: str) -> list[str]:
-      """
-      Given a ChromaDB user document ID, returns all possible values
-      that the user_id metadata field in reviews might contain.
-      
-      ChromaDB user ID: "yelp__BcWyKQL16ndpBdggh2kNA"
-      Candidates to try:
-        1. "yelp__BcWyKQL16ndpBdggh2kNA"  (exact match)
-        2. "_BcWyKQL16ndpBdggh2kNA"        (strip "yelp_" prefix)
-        3. "yelp__BcWyKQL16ndpBdggh2kNA"   (already covered by 1)
-      """
-      candidates = [chroma_user_id]
-      
-      for platform in ("yelp_", "amazon_", "goodreads_"):
-          if chroma_user_id.startswith(platform):
-              stripped = chroma_user_id[len(platform):]
-              if stripped not in candidates:
-                  candidates.append(stripped)
-              # Also try re-adding platform prefix in case of double prefix
-              reprefixed = platform + stripped
-              if reprefixed not in candidates:
-                  candidates.append(reprefixed)
-      
-      return candidates
+Also log finish_reason on every response:
+  finish_reason = response.candidates[0].finish_reason
+  logger.info("[LLM] Response: %d chars, finish_reason=%s", 
+              len(text), finish_reason)
+  if str(finish_reason) in ("MAX_TOKENS", "2"):
+      logger.warning("[LLM] TRUNCATED by token limit — increase max_output_tokens")
 
-  Then in the actual query method, loop through candidates:
-  
-  def query_reviews_for_user(
-      self, user_id: str, query_text: str, n_results: int = 5
-  ) -> list[str]:
-      candidates = self._build_user_id_candidates(user_id)
-      logger.info("[CHROMADB] Trying %d user_id candidates: %s", 
-                  len(candidates), candidates)
-      
-      for candidate in candidates:
-          try:
-              results = self.query(
-                  collection_name="reviews",
-                  query_texts=[query_text],
-                  n_results=n_results,
-                  where={"user_id": candidate},
-              )
-              docs = results.get("documents", [[]])[0]
-              valid = [d for d in docs if d and str(d).strip()]
-              if valid:
-                  logger.info("[CHROMADB] Found %d reviews with candidate: %s",
-                              len(valid), candidate)
-                  return valid
-          except Exception as e:
-              logger.warning("[CHROMADB] Query failed for candidate %s: %s", 
-                           candidate, e)
-              continue
-      
-      logger.warning("[CHROMADB] No reviews found for any candidate of: %s", 
-                     user_id)
-      return []
+FIX 3 — task_a/agent.py: fix regex parsing of document text
 
-FIX 4 — task_a/agent.py: use real ChromaDB metadata to rebuild fingerprint
+The document text format is exactly:
+  "User _BcWyKQL16ndpBdggh2kNA on yelp prefers Grocery, Arts & Crafts, 
+   Fruits & Veggies, Flowers & Gifts, Sewing & Alterations. 
+   Average rating 3.62 with rating deviation 1.02. 
+   Average review length 78.1 words, vocabulary size 1632, formality 0.48. 
+   Top phrases: we were, year old, if you, we had, very nice. 
+   Sentiment profile: positive=0.74, neutral=0.23, negative=0.03."
 
-When the agent fetches a user from ChromaDB and the user exists,
-it must rebuild StyleFingerprint from stored metadata, not defaults.
+Fix the regex patterns to match this exact format:
 
-After fetching user metadata from ChromaDB users collection:
-  
-  from shared.user_profile import StyleFingerprint, UserProfile
-  
-  meta = chroma_result["metadatas"][0]  # actual field name may vary
-  
-  # Parse top_phrases from comma-separated string
-  raw_phrases = meta.get("top_phrases", "") or ""
-  top_phrases = [p.strip() for p in raw_phrases.split(",") if p.strip()]
-  
-  # Parse nigerian_signals from comma-separated string  
-  raw_signals = meta.get("nigerian_signals", "") or ""
-  nigerian_signals = [s.strip() for s in raw_signals.split(",") if s.strip()]
-  
-  # Parse preferred_categories
-  raw_cats = meta.get("preferred_categories", "") or ""
-  preferred_categories = [c.strip() for c in raw_cats.split(",") if c.strip()]
-  
-  fingerprint = StyleFingerprint(
-      avg_rating=float(meta.get("avg_rating", 3.5)),
-      rating_std=float(meta.get("rating_std", 0.0)),
-      avg_review_length=float(meta.get("avg_review_length", 60.0)),
-      vocabulary_size=int(meta.get("vocabulary_size", 0)),
-      top_phrases=top_phrases,
-      sentiment_profile={
-          "positive": float(meta.get("sentiment_positive", 0.34)),
-          "neutral":  float(meta.get("sentiment_neutral",  0.33)),
-          "negative": float(meta.get("sentiment_negative", 0.33)),
-      },
-      formality_score=float(meta.get("formality_score", 0.5)),
-      nigerian_signals=nigerian_signals,
+  import re
+
+  # rating_std — matches "rating deviation 1.02"
+  m = re.search(r"rating deviation ([\d.]+)", document_text)
+  rating_std = float(m.group(1)) if m else 0.0
+
+  # formality — matches "formality 0.48"  
+  m = re.search(r"formality ([\d.]+)", document_text)
+  formality_score = float(m.group(1)) if m else 0.5
+
+  # top_phrases — matches "Top phrases: we were, year old, if you, we had, very nice."
+  m = re.search(r"Top phrases: ([^.]+)\.", document_text)
+  top_phrases = []
+  if m and m.group(1).strip().lower() != "none":
+      top_phrases = [p.strip() for p in m.group(1).split(",") if p.strip()]
+
+  # sentiment — matches "positive=0.74, neutral=0.23, negative=0.03"
+  sentiment_profile = {"positive": 0.34, "neutral": 0.33, "negative": 0.33}
+  for sentiment_key in ("positive", "neutral", "negative"):
+      m = re.search(rf"{sentiment_key}=([\d.]+)", document_text)
+      if m:
+          sentiment_profile[sentiment_key] = float(m.group(1))
+
+Add a log line after parsing to confirm it worked:
+  logger.info(
+      "[AGENT] Parsed from document: rating_std=%s, formality=%s, "
+      "phrases=%s, sentiment=%s",
+      rating_std, formality_score, top_phrases, sentiment_profile
   )
-  
-  NOTE: Check UserProfile.to_metadata() in shared/user_profile.py for 
-  the EXACT field names stored — use those exactly. The sentiment fields 
-  may be stored as "sentiment_positive" or just inside a nested dict.
-  Match whatever to_metadata() actually writes.
-
-  Add this log after rebuilding:
-  logger.info("[AGENT] Rebuilt fingerprint from ChromaDB: avg_rating=%s, 
-              review_count=%s, vocab=%s",
-              fingerprint.avg_rating,
-              meta.get("review_count"),
-              fingerprint.vocabulary_size)
 
 <constraints>
-- load_dotenv(override=True) must be the first thing that runs 
-  in both main.py and llm_client.py
-- Do not change any request/response schemas
-- The query_reviews_for_user method must be the single point of 
-  truth for review retrieval — update all callers to use it
-- Output all changed files in full with path headers
+- The minimum max_output_tokens anywhere in the codebase must be 1024
+- Nigerian adapter must produce output of similar length to input
+- Do not change request/response schemas  
+- Output all three files in full with path headers
 - No truncation
 </constraints>
 
-<expected_terminal_after_fix>
-INFO: [LLM] Gemini client initialized with key: AIzaSy...
-INFO: [AGENT] Starting for user: yelp__BcWyKQL16ndpBdggh2kNA
-INFO: [AGENT] Rebuilt fingerprint from ChromaDB: avg_rating=4.2, 
-              review_count=65, vocab=1847
-INFO: [CHROMADB] Trying 2 user_id candidates: ['yelp__BcWyKQL16ndpBdggh2kNA', 
-                 '_BcWyKQL16ndpBdggh2kNA']
-INFO: [CHROMADB] Found 5 reviews with candidate: _BcWyKQL16ndpBdggh2kNA
-INFO: [GENERATOR] Using LLM path
-INFO: [GENERATOR] Few-shot examples count: 5
-INFO: [GENERATOR] Raw LLM output: Honestly this place caught me off guard...
-</expected_terminal_after_fix>
+<expected_after_fix>
+Test 2 Nigerian mode response should be 4-6 complete sentences, ending
+with a period, with Nigerian cultural references naturally woven in.
+
+Terminal should show:
+  [LLM] Sending request: max_output_tokens=1024
+  [LLM] Response: 387 chars, finish_reason=STOP   ← STOP not MAX_TOKENS
+  [NIGERIAN] Input review length: 387 chars
+  [NIGERIAN] Output review length: 412 chars       ← similar length
+  [AGENT] Parsed from document: rating_std=1.02, formality=0.48,
+          phrases=['we were', 'year old', 'if you'], sentiment={positive:0.74...}
+</expected_after_fix>
