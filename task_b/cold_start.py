@@ -4,15 +4,16 @@
 from __future__ import annotations
 
 import json
+import logging
 from os import getenv
 from typing import Any
 
-from shared.llm_client import AnthropicLLMClient
+from shared.llm_client import GeminiLLMClient
 from shared.nigerian_adapter import NigerianContextAdapter
 from shared.prompts import TASK_B_COLD_START_SYSTEM, TASK_B_COLD_START_USER
 from task_b.schemas import Item, RequestContext, UserPersona
 
-CLAUDE_MODEL_NAME = "claude-sonnet-4-20250514"
+logger = logging.getLogger(__name__)
 POPULARITY_FALLBACKS = {
     "restaurant": [
         ("popular-jollof", "Popular Jollof Kitchen", "restaurant", 0.72),
@@ -36,7 +37,7 @@ POPULARITY_FALLBACKS = {
 class ColdStartHandler:
     """Handles recommendations when user history is empty or too sparse."""
 
-    def __init__(self, llm_client: AnthropicLLMClient | None = None) -> None:
+    def __init__(self, llm_client: GeminiLLMClient | None = None) -> None:
         self._llm_client = llm_client
 
     def detect_cold_start(self, user_profile: UserPersona) -> bool:
@@ -111,15 +112,14 @@ class ColdStartHandler:
         client = self._get_llm_client()
         if client is not None and (persona_text or existing_preferences):
             try:
-                response = await client.generate_text(
-                    system_prompt=TASK_B_COLD_START_SYSTEM,
-                    user_prompt=TASK_B_COLD_START_USER.format(
+                response = await client.complete(
+                    system=TASK_B_COLD_START_SYSTEM,
+                    user=TASK_B_COLD_START_USER.format(
                         persona_text=persona_text or "No persona text provided.",
                         preferences=existing_preferences,
                         request_context=request_context.model_dump(),
                     ),
-                    max_tokens=200,
-                    temperature=0.25,
+                    max_tokens=1024,
                 )
                 parsed = json.loads(response)
                 if isinstance(parsed, dict):
@@ -127,8 +127,8 @@ class ColdStartHandler:
                         str(key): max(0.0, min(1.0, float(value)))
                         for key, value in parsed.items()
                     }
-            except Exception:
-                pass
+            except Exception as error:
+                logger.warning("[COLD_START] Preference extraction failed: %s", error)
 
         fallback_preferences: dict[str, float] = {}
         favorite_categories = existing_preferences.get("favorite_categories")
@@ -164,10 +164,10 @@ class ColdStartHandler:
             for item_id, title, category, score in rows
         ]
 
-    def _get_llm_client(self) -> AnthropicLLMClient | None:
+    def _get_llm_client(self) -> GeminiLLMClient | None:
         if self._llm_client is not None:
             return self._llm_client
-        if not getenv("ANTHROPIC_API_KEY"):
+        if not getenv("GEMINI_API_KEY"):
             return None
-        self._llm_client = AnthropicLLMClient(model=CLAUDE_MODEL_NAME)
+        self._llm_client = GeminiLLMClient()
         return self._llm_client

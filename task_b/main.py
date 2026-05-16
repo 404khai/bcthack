@@ -1,7 +1,11 @@
 
 """FastAPI entrypoint for Task B: personalized recommendations."""
 
-from __future__ import annotations
+from dotenv import load_dotenv
+load_dotenv(override=True)
+
+import logging
+import os
 
 from fastapi import FastAPI
 
@@ -16,6 +20,9 @@ from task_b.schemas import (
     SessionHistoryResponse,
 )
 
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(name)s: %(message)s")
+logger = logging.getLogger(__name__)
+
 app = FastAPI(
     title="Task B - Recommendation Service",
     description=(
@@ -26,6 +33,16 @@ app = FastAPI(
 )
 
 agent = RecommendationAgent()
+
+
+@app.on_event("startup")
+async def log_startup_environment() -> None:
+    """Logs the core runtime environment Task B depends on."""
+    logger.info("CHROMA_PERSIST_DIR: %s", os.getenv("CHROMA_PERSIST_DIR"))
+    logger.info(
+        "GEMINI_API_KEY loaded: %s",
+        "yes" if os.getenv("GEMINI_API_KEY") else "NO - MISSING",
+    )
 
 
 @app.get(

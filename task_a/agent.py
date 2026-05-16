@@ -129,6 +129,7 @@ class UserModelingAgent:
     def _rebuild_fingerprint_from_chroma(self, chroma_user: dict) -> StyleFingerprint:
         metadata = chroma_user.get("metadata", {})
         document_text = chroma_user.get("document", "") or ""
+        logger.info("[AGENT] Chroma document text: %s", document_text[:400])
         sentiment_profile = metadata.get("sentiment_profile")
         if not isinstance(sentiment_profile, dict):
             sentiment_profile = {
@@ -151,7 +152,7 @@ class UserModelingAgent:
         top_phrases = self._split_metadata_list(metadata.get("top_phrases", ""))
         if not top_phrases:
             phrases_match = re.search(r"Top phrases: ([^.]+)\.", document_text)
-            if phrases_match:
+            if phrases_match and phrases_match.group(1).strip().lower() != "none":
                 top_phrases = [
                     phrase.strip()
                     for phrase in phrases_match.group(1).split(",")
@@ -162,6 +163,14 @@ class UserModelingAgent:
             match = re.search(rf"{key}=([\d.]+)", document_text)
             if match:
                 sentiment_profile[key] = float(match.group(1))
+
+        logger.info(
+            "[AGENT] Parsed from document: rating_std=%s, formality=%s, phrases=%s, sentiment=%s",
+            rating_std,
+            formality_score,
+            top_phrases,
+            sentiment_profile,
+        )
 
         fingerprint = StyleFingerprint(
             avg_rating=float(metadata.get("avg_rating", 3.5)),

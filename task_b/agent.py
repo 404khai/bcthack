@@ -3,9 +3,11 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from itertools import chain
 
+from shared.vector_store import VectorStore
 from task_b.cold_start import ColdStartHandler
 from task_b.conversation import ConversationManager
 from task_b.cross_domain import CrossDomainBridge
@@ -22,6 +24,8 @@ from task_b.schemas import (
     UserPersona,
 )
 
+logger = logging.getLogger(__name__)
+
 
 @dataclass(slots=True)
 class StrategyPlan:
@@ -35,7 +39,8 @@ class RecommendationAgent:
     """Implements a reasoning-first recommendation loop for Task B."""
 
     def __init__(self) -> None:
-        self.retriever = MultiSourceRetriever()
+        self.vector_store = VectorStore()
+        self.retriever = MultiSourceRetriever(vector_store=self.vector_store)
         self.cold_start = ColdStartHandler()
         self.cross_domain = CrossDomainBridge()
         self.conversation = ConversationManager()
@@ -58,14 +63,33 @@ class RecommendationAgent:
             if request.session_id
             else {}
         )
+        chroma_user = self.vector_store.get_by_id("users", request.user_persona.user_id)
+        review_count = self._extract_review_count(chroma_user)
+        is_warm = await self._is_warm_user(request.user_persona.user_id)
+        logger.info("[AGENT_B] User warm: %s", is_warm)
         thinking = self._build_reasoning_prompt(
             query=request.query,
             user_profile=request.user_persona,
             request_context=request.request_context,
             refined_preferences=refined_preferences,
+            review_count=review_count,
+            is_warm=is_warm,
+            chroma_user=chroma_user,
         )
-        plan = self._plan_strategy(request.user_persona, request.request_context, request.enable_cross_domain)
-        candidates = await self._retrieve_candidates(request, plan, refined_preferences)
+        plan = self._plan_strategy(
+            is_warm=is_warm,
+            request_context=request.request_context,
+            enable_cross_domain=request.enable_cross_domain,
+            source_platform=(chroma_user or {}).get("metadata", {}).get("platform", request.user_persona.platform),
+        )
+        candidates, retrieval_notes = await self._retrieve_candidates(
+            request,
+            plan,
+            refined_preferences,
+            chroma_user,
+            is_warm,
+        )
+        thinking.extend(retrieval_notes)
         ranked = await self.ranker.rerank(
             candidates=candidates,
             user_profile=request.user_persona,
@@ -147,37 +171,43 @@ class RecommendationAgent:
         user_profile: UserPersona,
         request_context: RequestContext,
         refined_preferences: dict[str, float],
+        review_count: int,
+        is_warm: bool,
+        chroma_user: dict | None,
     ) -> list[str]:
         """Builds a transparent pre-retrieval reasoning chain for the response."""
-        history_depth = len(user_profile.history)
         explicit_preferences = user_profile.preferences if isinstance(user_profile.preferences, dict) else {}
+        preferred_categories = self._preferred_categories_from_chroma(chroma_user)
         return [
             f"Think: interpret the query as '{query}' with target category '{request_context.category or 'unspecified'}'.",
-            f"Think: user history contains {history_depth} prior interactions, so the request is treated as {'warm' if history_depth >= 2 else 'cold'} start.",
+            f"Think: user has {review_count} stored interactions, treated as {'warm' if is_warm else 'cold start'}.",
             f"Plan: explicit persona preferences are {explicit_preferences or 'not provided'} and conversation refinements are {refined_preferences or 'none yet'}.",
             f"Plan: constraints considered before retrieval are {request_context.constraints or ['none']} and attributes {request_context.item_attributes or 'not provided'}.",
+            f"Plan: top categories from history are {preferred_categories or ['unknown']}.",
         ]
 
     def _plan_strategy(
         self,
-        user_profile: UserPersona,
+        *,
+        is_warm: bool,
         request_context: RequestContext,
         enable_cross_domain: bool,
+        source_platform: str,
     ) -> StrategyPlan:
         """Selects collaborative, content, cold-start, or hybrid retrieval strategy."""
-        if self.cold_start.detect_cold_start(user_profile):
+        if not is_warm:
             return StrategyPlan(
                 strategy="cold_start_hybrid",
-                notes=["Plan: use explicit preferences, Nigerian defaults, and popularity fallback because history is sparse."],
+                notes=["Plan: try live Chroma retrieval first, then use cold-start defaults only if real candidates are sparse."],
             )
-        if enable_cross_domain and request_context.target_domain:
+        if enable_cross_domain and request_context.target_domain and source_platform.lower() != request_context.target_domain.lower():
             return StrategyPlan(
                 strategy="hybrid_cross_domain",
-                notes=["Plan: blend history retrieval with cross-domain transfer into the requested target domain."],
+                notes=[f"Plan: blend warm-user retrieval with cross-domain transfer from {source_platform} into {request_context.target_domain}."],
             )
         return StrategyPlan(
             strategy="warm_history_content_hybrid",
-            notes=["Plan: use user-history retrieval first, then content retrieval to diversify candidates."],
+            notes=["Plan: use Chroma user-history retrieval first, then semantic item retrieval to diversify candidates."],
         )
 
     async def _retrieve_candidates(
@@ -185,36 +215,63 @@ class RecommendationAgent:
         request: RecommendRequest,
         plan: StrategyPlan,
         refined_preferences: dict[str, float],
-    ) -> list:
+        chroma_user: dict | None,
+        is_warm: bool,
+    ) -> tuple[list, list[str]]:
         """Retrieves candidates according to the selected plan and deduplicates them."""
         context = request.request_context
-        category = context.category or self._infer_primary_category(request.user_persona)
-        if plan.strategy == "cold_start_hybrid":
-            candidates = await self.cold_start.handle(request.user_persona, context, nigerian_mode=request.nigerian_mode)
-            return self._deduplicate_candidates(candidates)
-
+        category = context.category or self._infer_primary_category(request.user_persona) or ""
+        target_platform = self._target_platform_for_request(request)
+        preferred_categories = self._preferred_categories_from_chroma(chroma_user)
+        retrieval_category = category or (preferred_categories[0] if preferred_categories else "")
         history_candidates = await self.retriever.query_by_user_history(
             user_id=request.user_persona.user_id,
-            category=category or request.query,
+            category=retrieval_category or request.query,
             top_k=max(10, request.top_k * 3),
         )
         content_attributes = dict(context.item_attributes)
+        if retrieval_category:
+            content_attributes.setdefault("category", retrieval_category)
+        if target_platform:
+            content_attributes.setdefault("platform", target_platform)
         for key, value in refined_preferences.items():
             content_attributes.setdefault(key, value)
         content_candidates = await self.retriever.query_by_content(
             item_attributes=content_attributes or {"query": request.query},
             top_k=max(10, request.top_k * 3),
         )
+        if not content_candidates:
+            raw_candidates = await self.retriever.retrieve_candidates(
+                user_id=request.user_persona.user_id,
+                category=retrieval_category,
+                query_text=request.query,
+                top_k=max(10, request.top_k * 3),
+                platform=target_platform,
+            )
+            content_candidates = [
+                self.retriever._candidate_to_item(candidate)
+                for candidate in raw_candidates
+            ]
 
         cross_domain_candidates = []
+        cross_domain_notes: list[str] = []
         if plan.strategy == "hybrid_cross_domain" and context.target_domain:
-            source_reviews = [entry.text for entry in request.user_persona.history if entry.text]
+            source_platform = (chroma_user or {}).get("metadata", {}).get("platform", request.user_persona.platform)
+            logger.info("[AGENT_B] Cross-domain: %s → %s", source_platform, context.target_domain)
+            source_reviews = self.vector_store.query_reviews_for_user(
+                request.user_persona.user_id,
+                context.target_domain,
+                n_results=max(8, request.top_k * 2),
+            )
             inferred_preferences = await self.cross_domain.infer_cross_domain_preferences(
                 source_reviews=source_reviews,
                 target_domain=context.target_domain,
             )
+            cross_domain_notes.append(
+                f"Think: cross-domain inference applied from {source_platform} to {context.target_domain} using {len(source_reviews)} source reviews."
+            )
             cross_domain_candidates = await self.retriever.query_cross_domain(
-                source_domain=request.user_persona.platform,
+                source_domain=source_platform,
                 target_domain=context.target_domain,
                 user_id=request.user_persona.user_id,
                 top_k=max(8, request.top_k * 2),
@@ -227,9 +284,25 @@ class RecommendationAgent:
                 )
 
         combined = list(chain(history_candidates, content_candidates, cross_domain_candidates))
-        if not combined:
-            combined = await self.cold_start.handle(request.user_persona, context)
-        return self._deduplicate_candidates(combined)
+        deduped = self._deduplicate_candidates(combined)
+        retrieval_notes = [
+            f"Think: retrieved {len(deduped)} real candidates from ChromaDB.",
+            f"Think: top candidate is {deduped[0].title if deduped else 'none'}.",
+        ]
+        retrieval_notes.extend(cross_domain_notes)
+
+        if not deduped or (not is_warm and len(deduped) < request.top_k):
+            fallback_candidates = await self.cold_start.handle(
+                request.user_persona,
+                context,
+                nigerian_mode=request.nigerian_mode,
+            )
+            deduped = self._deduplicate_candidates(list(chain(deduped, fallback_candidates)))
+            retrieval_notes.append(
+                f"Think: supplemented with {len(fallback_candidates)} cold-start candidates because real retrieval was sparse."
+            )
+
+        return deduped, retrieval_notes
 
     def _deduplicate_candidates(self, candidates: list) -> list:
         """Deduplicates candidates while keeping the strongest similarity score."""
@@ -251,6 +324,44 @@ class RecommendationAgent:
         if user_profile.history:
             return user_profile.history[0].category
         return None
+
+    async def _is_warm_user(self, user_id: str) -> bool:
+        """Returns True if user has stored reviews in ChromaDB."""
+        try:
+            results = self.vector_store.get_by_id("users", user_id)
+            if results and results.get("metadata"):
+                review_count = int(results["metadata"].get("review_count", 0))
+                logger.info("[AGENT_B] User %s has %d reviews in ChromaDB", user_id, review_count)
+                return review_count >= 3
+        except Exception as error:
+            logger.warning("[AGENT_B] Could not check user warmth: %s", error)
+        return False
+
+    def _extract_review_count(self, chroma_user: dict | None) -> int:
+        if not chroma_user:
+            return 0
+        return int((chroma_user.get("metadata") or {}).get("review_count", 0))
+
+    def _preferred_categories_from_chroma(self, chroma_user: dict | None) -> list[str]:
+        if not chroma_user:
+            return []
+        raw_categories = (chroma_user.get("metadata") or {}).get("preferred_categories", "")
+        if isinstance(raw_categories, str):
+            return [category.strip() for category in raw_categories.split(",") if category.strip()]
+        if isinstance(raw_categories, list):
+            return [str(category).strip() for category in raw_categories if str(category).strip()]
+        return []
+
+    def _target_platform_for_request(self, request: RecommendRequest) -> str | None:
+        domain = (request.request_context.target_domain or request.request_context.category or "").lower()
+        if domain in {"food", "restaurants", "restaurant"}:
+            return "yelp"
+        if domain in {"books", "book"}:
+            return "goodreads"
+        if domain in {"electronics", "product", "shopping"}:
+            return "amazon"
+        platform = request.user_persona.platform.lower()
+        return platform if platform in {"yelp", "goodreads", "amazon"} else None
 
     def _format_assistant_message(self, ranked_items: list[RankedItem]) -> str:
         if not ranked_items:
