@@ -30,6 +30,8 @@ class GeminiLLMClient:
         self.client = genai.Client(api_key=resolved_api_key)
         self.model = "gemini-2.5-flash"
         self.free_tier_mode = getenv("FREE_TIER_MODE", "false").lower() == "true"
+        self.last_finish_reason: str | None = None
+        self.last_response_length: int = 0
         logger.info("[LLM] Gemini client initialized with key: %s...", resolved_api_key[:8])
 
     async def generate_text(
@@ -43,11 +45,13 @@ class GeminiLLMClient:
     ) -> str:
         delay_seconds = 1.0
         last_error: Exception | None = None
+        effective_max_tokens = max(max_tokens, 1024)
 
         for attempt in range(1, retries + 1):
             try:
                 if self.free_tier_mode:
                     await asyncio.sleep(1.0)
+                logger.info("[LLM] Sending request: max_output_tokens=%d", effective_max_tokens)
 
                 def _generate():
                     return self.client.models.generate_content(
@@ -55,7 +59,7 @@ class GeminiLLMClient:
                         contents=user_prompt,
                         config=types.GenerateContentConfig(
                             system_instruction=system_prompt,
-                            max_output_tokens=max_tokens,
+                            max_output_tokens=effective_max_tokens,
                             temperature=temperature,
                         )
                     )
@@ -66,11 +70,16 @@ class GeminiLLMClient:
                 candidates = getattr(response, "candidates", None) or []
                 if candidates:
                     finish_reason = getattr(candidates[0], "finish_reason", None)
-                logger.info("[LLM] Finish reason: %s", finish_reason)
-                logger.info("[LLM] Full response length: %d chars", len(full_text))
-                if str(finish_reason) == "MAX_TOKENS":
+                self.last_finish_reason = str(finish_reason) if finish_reason is not None else None
+                self.last_response_length = len(full_text)
+                logger.info(
+                    "[LLM] Response: %d chars, finish_reason=%s",
+                    len(full_text),
+                    finish_reason,
+                )
+                if str(finish_reason) in ("MAX_TOKENS", "2"):
                     logger.warning(
-                        "[LLM] Response was cut short by token limit. Increase max_output_tokens."
+                        "[LLM] TRUNCATED by token limit — increase max_output_tokens"
                     )
                 return full_text
             except ResourceExhausted as error:
