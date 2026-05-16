@@ -345,12 +345,34 @@ class RecommendationAgent:
     def _preferred_categories_from_chroma(self, chroma_user: dict | None) -> list[str]:
         if not chroma_user:
             return []
-        raw_categories = (chroma_user.get("metadata") or {}).get("preferred_categories", "")
+        metadata = chroma_user.get("metadata") or {}
+        platform = str(metadata.get("platform", "")).lower()
+        raw_categories = metadata.get("top_categories", "") or metadata.get("preferred_categories", "") or ""
+
         if isinstance(raw_categories, str):
-            return [category.strip() for category in raw_categories.split(",") if category.strip()]
-        if isinstance(raw_categories, list):
-            return [str(category).strip() for category in raw_categories if str(category).strip()]
-        return []
+            top_categories = [
+                category.strip()
+                for category in raw_categories.split(",")
+                if category.strip() and category.strip().lower() != "unknown"
+            ]
+        elif isinstance(raw_categories, list):
+            top_categories = [
+                str(category).strip()
+                for category in raw_categories
+                if str(category).strip() and str(category).strip().lower() != "unknown"
+            ]
+        else:
+            top_categories = []
+
+        if not top_categories:
+            top_categories = (
+                ["restaurants"] if platform == "yelp"
+                else ["Electronics"] if platform == "amazon"
+                else ["fiction", "to-read"]
+            )
+
+        logger.info("[AGENT_B] Resolved categories: %s", top_categories)
+        return top_categories
 
     def _target_platform_for_request(self, request: RecommendRequest) -> str | None:
         domain = (request.request_context.target_domain or request.request_context.category or "").lower()

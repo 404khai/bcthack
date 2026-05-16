@@ -89,6 +89,21 @@ class VectorStore:
             "document": (documents[0] if documents else "") or "",
         }
 
+    def get_user_by_id(self, record_id: str) -> dict[str, Any] | None:
+        """Convenience wrapper for fetching a user record."""
+        return self.get_by_id("users", record_id)
+
+    def get_item_by_id(self, record_id: str) -> dict[str, Any] | None:
+        """Convenience wrapper for fetching an item record."""
+        return self.get_by_id("items", record_id)
+
+    def similarity_from_distance(self, distance: float | int | None) -> float:
+        """Converts Chroma distance values into a clamped similarity score in [0, 1]."""
+        if distance is None:
+            return 0.0
+        similarity = 1.0 - (float(distance) / 2.0)
+        return round(max(0.0, min(1.0, similarity)), 3)
+
     def _build_user_id_candidates(self, chroma_user_id: str) -> list[str]:
         """Builds possible review metadata user_id values from a Chroma user document ID."""
         candidates = [chroma_user_id]

@@ -1,23 +1,24 @@
 
 """Claude-backed reranker for Task B candidates."""
 
-from __future__ import annotations
+from dotenv import load_dotenv
+load_dotenv(override=True)
 
 import json
+import logging
 from os import getenv
-from typing import Any
 
-from shared.llm_client import AnthropicLLMClient
+from shared.llm_client import GeminiLLMClient
 from shared.nigerian_adapter import NigerianContextAdapter
 from shared.prompts import TASK_B_RERANK_SYSTEM, TASK_B_RERANK_USER
 from task_b.schemas import Item, RankedItem, RequestContext, UserPersona
 
-CLAUDE_MODEL_NAME = "claude-sonnet-4-20250514"
+logger = logging.getLogger(__name__)
 
 class LLMRanker:
     """Reranks retrieved candidates using Claude with deterministic fallback logic."""
 
-    def __init__(self, llm_client: AnthropicLLMClient | None = None) -> None:
+    def __init__(self, llm_client: GeminiLLMClient | None = None) -> None:
         self._llm_client = llm_client
 
     async def rerank(
@@ -36,22 +37,30 @@ class LLMRanker:
         adapter = NigerianContextAdapter(enabled=nigerian_mode)
         if client is not None:
             try:
-                response = await client.generate_text(
-                    system_prompt=TASK_B_RERANK_SYSTEM,
-                    user_prompt=TASK_B_RERANK_USER.format(
+                logger.info("[RANKER] Calling LLM for %d candidates", len(candidates))
+                response = await client.complete(
+                    system=(
+                        TASK_B_RERANK_SYSTEM
+                        + "\nFor each item, write 2-3 sentences explaining WHY this specific "
+                          "item matches this specific user's preferences. Reference the item's actual "
+                          "name, category, and the user's known interests. Do not use generic phrases "
+                          "like 'aligns with preferences'."
+                    ),
+                    user=TASK_B_RERANK_USER.format(
                         user_profile=user_profile.model_dump(),
                         query_context=query_context.model_dump(),
                         candidates=[candidate.model_dump() for candidate in candidates[:20]],
                     ),
-                    max_tokens=700,
-                    temperature=0.25,
+                    max_tokens=2048,
                 )
-                parsed = json.loads(response)
+                parsed = json.loads(self._extract_json_payload(response))
                 ranked = await self._parse_ranked_response(parsed, candidates, adapter)
                 if ranked:
+                    logger.info("[RANKER] LLM explanation sample: %s", ranked[0].explanation[:100])
                     return ranked
-            except Exception:
-                pass
+                logger.warning("[RANKER] LLM returned no usable ranked rows; falling back.")
+            except Exception as error:
+                logger.error("[RANKER] LLM failed: %s", error, exc_info=True)
 
         return await self._fallback_rank(candidates, user_profile, query_context, adapter)
 
@@ -106,8 +115,10 @@ class LLMRanker:
             if candidate.category.lower() in favorite_set:
                 score += 0.8
             explanation = (
-                f"{candidate.title} fits the request because it aligns with "
-                f"{query_context.category or 'the stated intent'} and the user's known preferences."
+                f"{candidate.title} is a relevant match because it sits in the {candidate.category} category "
+                f"and carries metadata that overlaps with the current request for "
+                f"{query_context.category or 'this type of item'}. It remains a heuristic fallback "
+                f"because the LLM ranking step did not return a usable explanation."
             )
             adapted_explanation = await adapter.adapt_recommendation_explanation(explanation, candidate.category)
             confidence = max(0.35, min(0.95, candidate.similarity_score))
@@ -116,17 +127,28 @@ class LLMRanker:
                     item=candidate.model_copy(
                         update={"category": adapter.adapt_category(candidate.category)}
                     ),
-                    score=round(min(10.0, score), 3),
+                    score=round(max(0.0, min(10.0, score)), 3),
                     confidence=round(confidence, 3),
                     explanation=adapted_explanation,
                 )
             )
         return sorted(ranked, key=lambda item: item.score, reverse=True)
 
-    def _get_llm_client(self) -> AnthropicLLMClient | None:
+    def _get_llm_client(self) -> GeminiLLMClient | None:
         if self._llm_client is not None:
             return self._llm_client
-        if not getenv("ANTHROPIC_API_KEY"):
+        if not getenv("GEMINI_API_KEY"):
             return None
-        self._llm_client = AnthropicLLMClient(model=CLAUDE_MODEL_NAME)
+        self._llm_client = GeminiLLMClient()
         return self._llm_client
+
+    def _extract_json_payload(self, response: str) -> str:
+        """Strips common markdown fencing from model responses before JSON parsing."""
+        cleaned = response.strip()
+        if cleaned.startswith("```json"):
+            cleaned = cleaned[7:]
+        elif cleaned.startswith("```"):
+            cleaned = cleaned[3:]
+        if cleaned.endswith("```"):
+            cleaned = cleaned[:-3]
+        return cleaned.strip()
