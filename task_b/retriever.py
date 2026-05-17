@@ -188,25 +188,53 @@ class MultiSourceRetriever:
                     for meta in metadatas:
                         if not meta:
                             continue
-                        item_id = str(meta.get("item_id", "")).strip()
-                        if not item_id:
+                        raw_item_id = str(meta.get("item_id", "")).strip()
+                        platform = str(meta.get("platform", "")).strip()
+                        if not raw_item_id:
                             continue
-                        item_record = self.vector_store.get_by_id("items", item_id)
-                        item_metadata = item_record.get("metadata", {}) if item_record else {}
-                        history_items.append(
-                            {
-                                "item_id": item_id,
-                                "title": item_metadata.get("name", item_id),
-                                "rating": float(meta.get("rating", 3.0)),
-                                "category": item_metadata.get("category") or meta.get("category", ""),
+
+                        item_id_candidates = [raw_item_id]
+                        if platform and not raw_item_id.startswith(f"{platform}_"):
+                            item_id_candidates.append(f"{platform}_{raw_item_id}")
+                        if not raw_item_id.startswith("yelp_"):
+                            item_id_candidates.append(f"yelp_{raw_item_id}")
+
+                        resolved_item = None
+                        for candidate_id in item_id_candidates:
+                            item_record = self.vector_store.get_item_by_id(candidate_id)
+                            if item_record and item_record.get("metadata"):
+                                resolved_item = item_record
+                                break
+
+                        if resolved_item:
+                            item_meta = resolved_item["metadata"]
+                            result = {
+                                "item_id": resolved_item["id"],
+                                "title": item_meta.get("name", resolved_item["id"]),
+                                "category": item_meta.get("category", "unknown"),
+                                "source": "user_history",
                                 "similarity_score": 0.82,
                                 "metadata": {
-                                    **item_metadata,
+                                    **item_meta,
                                     "rating": float(meta.get("rating", 3.0)),
                                     "history_user_id": candidate,
                                 },
                             }
-                        )
+                        else:
+                            logger.warning("[RETRIEVER] Could not resolve item: %s", raw_item_id)
+                            result = {
+                                "item_id": raw_item_id,
+                                "title": raw_item_id,
+                                "category": "unknown",
+                                "source": "user_history_unresolved",
+                                "similarity_score": 0.82,
+                                "metadata": {
+                                    "rating": float(meta.get("rating", 3.0)),
+                                    "history_user_id": candidate,
+                                },
+                            }
+
+                        history_items.append(result)
                     if history_items:
                         return history_items[:top_k]
             except Exception:
@@ -235,7 +263,7 @@ class MultiSourceRetriever:
                         "title": meta.get("name", item_id),
                         "category": meta.get("category", default_category or "unknown"),
                         "source": source,
-                        "similarity_score": round(1 - float(dist), 3),
+                        "similarity_score": self.vector_store.similarity_from_distance(dist),
                         "metadata": meta,
                     }
                 )
