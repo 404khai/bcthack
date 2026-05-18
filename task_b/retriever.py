@@ -108,6 +108,20 @@ class MultiSourceRetriever:
         """Retrieves items the user has reviewed before."""
         return await asyncio.to_thread(self._retrieve_user_history_items_sync, user_id, top_k)
 
+    async def retrieve_semantic_candidates(
+        self,
+        query_text: str,
+        category: str,
+        top_k: int = 15,
+    ) -> list[dict[str, Any]]:
+        """Semantic search over the items collection as a fallback."""
+        return await asyncio.to_thread(
+            self._retrieve_semantic_candidates_sync,
+            query_text,
+            category,
+            top_k,
+        )
+
     def _retrieve_candidates_sync(
         self,
         user_id: str,
@@ -240,6 +254,48 @@ class MultiSourceRetriever:
             except Exception:
                 continue
         return []
+
+    def _retrieve_semantic_candidates_sync(
+        self,
+        query_text: str,
+        category: str,
+        top_k: int,
+    ) -> list[dict[str, Any]]:
+        """Semantic search over items collection as fallback."""
+        logger.info("[RETRIEVER] Semantic fallback query: %s", query_text[:60])
+
+        try:
+            results = self.vector_store.query(
+                collection_name="items",
+                query_texts=[query_text],
+                n_results=top_k,
+            )
+            ids = results.get("ids", [[]])[0] if results.get("ids") else []
+            metas = results.get("metadatas", [[]])[0] if results.get("metadatas") else []
+            distances = results.get("distances", [[]])[0] if results.get("distances") else []
+            docs = results.get("documents", [[]])[0] if results.get("documents") else []
+
+            candidates: list[dict[str, Any]] = []
+            for item_id, meta, dist, doc in zip(ids, metas, distances, docs):
+                if not doc or not str(doc).strip():
+                    continue
+                meta = meta or {}
+                candidates.append(
+                    {
+                        "item_id": item_id,
+                        "title": meta.get("name", item_id),
+                        "category": meta.get("category", category or "unknown"),
+                        "source": "semantic_fallback",
+                        "similarity_score": self.vector_store.similarity_from_distance(dist),
+                        "metadata": meta,
+                    }
+                )
+
+            logger.info("[RETRIEVER] Semantic fallback returned %d candidates", len(candidates))
+            return candidates
+        except Exception as error:
+            logger.error("[RETRIEVER] Semantic fallback failed: %s", error)
+            return []
 
     def _results_to_candidates(
         self,

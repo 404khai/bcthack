@@ -37,7 +37,8 @@ class LLMRanker:
         adapter = NigerianContextAdapter(enabled=nigerian_mode)
         if client is not None:
             try:
-                logger.info("[RANKER] Calling LLM for %d candidates", len(candidates))
+                llm_candidates = candidates[:8]
+                logger.info("[RANKER] Calling LLM for %d candidates", len(llm_candidates))
                 response = await client.complete(
                     system=(
                         TASK_B_RERANK_SYSTEM
@@ -49,9 +50,9 @@ class LLMRanker:
                     user=TASK_B_RERANK_USER.format(
                         user_profile=user_profile.model_dump(),
                         query_context=query_context.model_dump(),
-                        candidates=[candidate.model_dump() for candidate in candidates[:20]],
+                        candidates=[candidate.model_dump() for candidate in llm_candidates],
                     ),
-                    max_tokens=2048,
+                    max_tokens=4096,
                 )
                 parsed = json.loads(self._extract_json_payload(response))
                 ranked = await self._parse_ranked_response(parsed, candidates, adapter)
@@ -143,7 +144,7 @@ class LLMRanker:
         return self._llm_client
 
     def _extract_json_payload(self, response: str) -> str:
-        """Strips common markdown fencing from model responses before JSON parsing."""
+        """Strips markdown and salvages complete JSON objects from truncated arrays."""
         cleaned = response.strip()
         if cleaned.startswith("```json"):
             cleaned = cleaned[7:]
@@ -151,4 +152,60 @@ class LLMRanker:
             cleaned = cleaned[3:]
         if cleaned.endswith("```"):
             cleaned = cleaned[:-3]
-        return cleaned.strip()
+        cleaned = cleaned.strip()
+
+        start = cleaned.find("[")
+        if start == -1:
+            return "[]"
+
+        candidate = cleaned[start:]
+        try:
+            json.loads(candidate)
+            return candidate
+        except json.JSONDecodeError:
+            pass
+
+        salvaged: list[str] = []
+        depth = 0
+        obj_start: int | None = None
+        in_string = False
+        escape = False
+
+        for index, char in enumerate(candidate[1:], start=1):
+            if in_string:
+                if escape:
+                    escape = False
+                elif char == "\\":
+                    escape = True
+                elif char == '"':
+                    in_string = False
+                continue
+
+            if char == '"':
+                in_string = True
+                continue
+
+            if char == "{":
+                if depth == 0:
+                    obj_start = index
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                if depth == 0 and obj_start is not None:
+                    obj_str = candidate[obj_start : index + 1]
+                    try:
+                        json.loads(obj_str)
+                        salvaged.append(obj_str)
+                    except json.JSONDecodeError:
+                        pass
+                    obj_start = None
+
+        if salvaged:
+            logger.warning(
+                "[RANKER] Salvaged %d complete objects from truncated JSON",
+                len(salvaged),
+            )
+            return "[" + ",".join(salvaged) + "]"
+
+        logger.error("[RANKER] Could not salvage any JSON objects from response")
+        return "[]"

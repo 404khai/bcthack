@@ -37,7 +37,7 @@ RESPONSE
         }
       },
       "score": 8.2,
-      "explanation": "L3V21nAe-CicW2bvtNWa0g fits the request because it aligns with restaurants and the user's known preferences.",
+      "explanation": "L3V21nAe-CicW2bvtNWa0g is a relevant match because it sits in the unknown category and carries metadata that overlaps with the current request for restaurants. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
       "confidence": 0.82
     },
     {
@@ -53,23 +53,27 @@ RESPONSE
         }
       },
       "score": 8.2,
-      "explanation": "fSogaGRzGLMcva3vw5Id_w fits the request because it aligns with restaurants and the user's known preferences.",
+      "explanation": "fSogaGRzGLMcva3vw5Id_w is a relevant match because it sits in the unknown category and carries metadata that overlaps with the current request for restaurants. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
       "confidence": 0.82
     },
     {
       "item": {
-        "item_id": "rQW9iupvhk6ScPn2VPNLVQ",
-        "title": "rQW9iupvhk6ScPn2VPNLVQ",
-        "category": "unknown",
+        "item_id": "yelp_rQW9iupvhk6ScPn2VPNLVQ",
+        "title": "Octopus Falafel Truck",
+        "category": "Food Trucks",
         "source": "user_history",
         "similarity_score": 0.82,
         "metadata": {
+          "avg_rating": 4.5,
+          "category": "Food Trucks",
+          "name": "Octopus Falafel Truck",
+          "platform": "yelp",
           "rating": 4,
           "history_user_id": "_BcWyKQL16ndpBdggh2kNA"
         }
       },
       "score": 8.2,
-      "explanation": "rQW9iupvhk6ScPn2VPNLVQ fits the request because it aligns with restaurants and the user's known preferences.",
+      "explanation": "Octopus Falafel Truck is a relevant match because it sits in the Food Trucks category and carries metadata that overlaps with the current request for restaurants. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
       "confidence": 0.82
     },
     {
@@ -85,7 +89,7 @@ RESPONSE
         }
       },
       "score": 8.2,
-      "explanation": "A9rVxmIBtHZRvNhbBaGAWg fits the request because it aligns with restaurants and the user's known preferences.",
+      "explanation": "A9rVxmIBtHZRvNhbBaGAWg is a relevant match because it sits in the unknown category and carries metadata that overlaps with the current request for restaurants. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
       "confidence": 0.82
     },
     {
@@ -101,7 +105,7 @@ RESPONSE
         }
       },
       "score": 8.2,
-      "explanation": "D5V0Fawd6ODVgqCY8xngsw fits the request because it aligns with restaurants and the user's known preferences.",
+      "explanation": "D5V0Fawd6ODVgqCY8xngsw is a relevant match because it sits in the unknown category and carries metadata that overlaps with the current request for restaurants. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
       "confidence": 0.82
     }
   ],
@@ -110,7 +114,7 @@ RESPONSE
     "Think: user has 65 stored interactions, treated as warm.",
     "Plan: explicit persona preferences are not provided and conversation refinements are none yet.",
     "Plan: constraints considered before retrieval are ['none'] and attributes not provided.",
-    "Plan: top categories from history are ['unknown'].",
+    "Plan: top categories from history are ['Grocery', 'Arts & Crafts', 'Fruits & Veggies'].",
     "Think: retrieved 30 real candidates from ChromaDB.",
     "Think: top candidate is L3V21nAe-CicW2bvtNWa0g.",
     "Plan: use Chroma user-history retrieval first, then semantic item retrieval to diversify candidates."
@@ -121,18 +125,19 @@ RESPONSE
 }
 
 LOGS:
+PS C:\Users\DanielsFega\Hackathons\bcthack> venv\Scripts\activate            
 (venv) PS C:\Users\DanielsFega\Hackathons\bcthack> uvicorn task_b.main:app --port 8002 --reload
 INFO:     Will watch for changes in these directories: ['C:\\Users\\DanielsFega\\Hackathons\\bcthack']
 INFO:     Uvicorn running on http://127.0.0.1:8002 (Press CTRL+C to quit)
-INFO:     Started reloader process [31652] using WatchFiles
+INFO:     Started reloader process [16744] using WatchFiles
 ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientStartEvent: capture() takes 1 positional argument but 3 were given        
-INFO:     Started server process [31108]
+INFO:     Started server process [25172]
 INFO:     Waiting for application startup.
 INFO: task_b.main: CHROMA_PERSIST_DIR: ./chroma_data
 INFO: task_b.main: GEMINI_API_KEY loaded: yes
 INFO:     Application startup complete.
-INFO:     127.0.0.1:59559 - "GET /docs HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59559 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63379 - "GET /docs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63379 - "GET /openapi.json HTTP/1.1" 200 OK
 INFO: shared.vector_store: [CHROMADB] Fetching users by id: yelp__BcWyKQL16ndpBdggh2kNA
 ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
 ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event CollectionGetEvent: capture() takes 1 positional argument but 3 were given      
@@ -140,6 +145,8 @@ INFO: shared.vector_store: [CHROMADB] Fetching users by id: yelp__BcWyKQL16ndpBd
 ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
 INFO: task_b.agent: [AGENT_B] User yelp__BcWyKQL16ndpBdggh2kNA has 65 reviews in ChromaDB
 INFO: task_b.agent: [AGENT_B] User warm: True
+INFO: task_b.agent: [AGENT_B] Resolved categories: ['Grocery', 'Arts & Crafts', 'Fruits & Veggies']
+INFO: task_b.agent: [AGENT_B] Resolved categories: ['Grocery', 'Arts & Crafts', 'Fruits & Veggies']
 ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
 INFO: shared.vector_store: [CHROMADB] Querying for user_id: yelp__BcWyKQL16ndpBdggh2kNA
 ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event CollectionQueryEvent: capture() takes 1 positional argument but 3 were given    
@@ -152,48 +159,148 @@ INFO: shared.vector_store: [CHROMADB] Fetching items by id: L3V21nAe-CicW2bvtNWa
 ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
 ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event CollectionGetEvent: capture() takes 1 positional argument but 3 were given      
 INFO: shared.vector_store: [CHROMADB] No items record found for id: L3V21nAe-CicW2bvtNWa0g
+INFO: shared.vector_store: [CHROMADB] Fetching items by id: yelp_L3V21nAe-CicW2bvtNWa0g
+ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+INFO: shared.vector_store: [CHROMADB] No items record found for id: yelp_L3V21nAe-CicW2bvtNWa0g
+INFO: shared.vector_store: [CHROMADB] Fetching items by id: yelp_L3V21nAe-CicW2bvtNWa0g
+ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+INFO: shared.vector_store: [CHROMADB] No items record found for id: yelp_L3V21nAe-CicW2bvtNWa0g
+WARNING: task_b.retriever: [RETRIEVER] Could not resolve item: L3V21nAe-CicW2bvtNWa0g
 INFO: shared.vector_store: [CHROMADB] Fetching items by id: fSogaGRzGLMcva3vw5Id_w
 ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
 INFO: shared.vector_store: [CHROMADB] No items record found for id: fSogaGRzGLMcva3vw5Id_w
+INFO: shared.vector_store: [CHROMADB] Fetching items by id: yelp_fSogaGRzGLMcva3vw5Id_w
+ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+INFO: shared.vector_store: [CHROMADB] No items record found for id: yelp_fSogaGRzGLMcva3vw5Id_w
+INFO: shared.vector_store: [CHROMADB] Fetching items by id: yelp_fSogaGRzGLMcva3vw5Id_w
+ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+INFO: shared.vector_store: [CHROMADB] No items record found for id: yelp_fSogaGRzGLMcva3vw5Id_w
+WARNING: task_b.retriever: [RETRIEVER] Could not resolve item: fSogaGRzGLMcva3vw5Id_w
 INFO: shared.vector_store: [CHROMADB] Fetching items by id: rQW9iupvhk6ScPn2VPNLVQ
 ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
 INFO: shared.vector_store: [CHROMADB] No items record found for id: rQW9iupvhk6ScPn2VPNLVQ
+INFO: shared.vector_store: [CHROMADB] Fetching items by id: yelp_rQW9iupvhk6ScPn2VPNLVQ
+ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
 INFO: shared.vector_store: [CHROMADB] Fetching items by id: A9rVxmIBtHZRvNhbBaGAWg
 ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
 INFO: shared.vector_store: [CHROMADB] No items record found for id: A9rVxmIBtHZRvNhbBaGAWg
+INFO: shared.vector_store: [CHROMADB] Fetching items by id: yelp_A9rVxmIBtHZRvNhbBaGAWg
+ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+INFO: shared.vector_store: [CHROMADB] No items record found for id: yelp_A9rVxmIBtHZRvNhbBaGAWg
+INFO: shared.vector_store: [CHROMADB] Fetching items by id: yelp_A9rVxmIBtHZRvNhbBaGAWg
+ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+INFO: shared.vector_store: [CHROMADB] No items record found for id: yelp_A9rVxmIBtHZRvNhbBaGAWg
+WARNING: task_b.retriever: [RETRIEVER] Could not resolve item: A9rVxmIBtHZRvNhbBaGAWg
 INFO: shared.vector_store: [CHROMADB] Fetching items by id: D5V0Fawd6ODVgqCY8xngsw
 ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
 INFO: shared.vector_store: [CHROMADB] No items record found for id: D5V0Fawd6ODVgqCY8xngsw
+INFO: shared.vector_store: [CHROMADB] Fetching items by id: yelp_D5V0Fawd6ODVgqCY8xngsw
+ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+INFO: shared.vector_store: [CHROMADB] No items record found for id: yelp_D5V0Fawd6ODVgqCY8xngsw
+INFO: shared.vector_store: [CHROMADB] Fetching items by id: yelp_D5V0Fawd6ODVgqCY8xngsw
+ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+INFO: shared.vector_store: [CHROMADB] No items record found for id: yelp_D5V0Fawd6ODVgqCY8xngsw
+WARNING: task_b.retriever: [RETRIEVER] Could not resolve item: D5V0Fawd6ODVgqCY8xngsw
 INFO: shared.vector_store: [CHROMADB] Fetching items by id: rtl43jmaNIrm3LYC1c_WAA
 ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
 INFO: shared.vector_store: [CHROMADB] No items record found for id: rtl43jmaNIrm3LYC1c_WAA
+INFO: shared.vector_store: [CHROMADB] Fetching items by id: yelp_rtl43jmaNIrm3LYC1c_WAA
+ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+INFO: shared.vector_store: [CHROMADB] No items record found for id: yelp_rtl43jmaNIrm3LYC1c_WAA
+INFO: shared.vector_store: [CHROMADB] Fetching items by id: yelp_rtl43jmaNIrm3LYC1c_WAA
+ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+INFO: shared.vector_store: [CHROMADB] No items record found for id: yelp_rtl43jmaNIrm3LYC1c_WAA
+WARNING: task_b.retriever: [RETRIEVER] Could not resolve item: rtl43jmaNIrm3LYC1c_WAA
 INFO: shared.vector_store: [CHROMADB] Fetching items by id: BJnnPDTZXsyXou42HnHfHA
 ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
 INFO: shared.vector_store: [CHROMADB] No items record found for id: BJnnPDTZXsyXou42HnHfHA
+INFO: shared.vector_store: [CHROMADB] Fetching items by id: yelp_BJnnPDTZXsyXou42HnHfHA
+ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+INFO: shared.vector_store: [CHROMADB] No items record found for id: yelp_BJnnPDTZXsyXou42HnHfHA
+INFO: shared.vector_store: [CHROMADB] Fetching items by id: yelp_BJnnPDTZXsyXou42HnHfHA
+ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+INFO: shared.vector_store: [CHROMADB] No items record found for id: yelp_BJnnPDTZXsyXou42HnHfHA
+WARNING: task_b.retriever: [RETRIEVER] Could not resolve item: BJnnPDTZXsyXou42HnHfHA
 INFO: shared.vector_store: [CHROMADB] Fetching items by id: bJAY2baMKSTlWRc-QZGopQ
 ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
 INFO: shared.vector_store: [CHROMADB] No items record found for id: bJAY2baMKSTlWRc-QZGopQ
+INFO: shared.vector_store: [CHROMADB] Fetching items by id: yelp_bJAY2baMKSTlWRc-QZGopQ
+ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+INFO: shared.vector_store: [CHROMADB] No items record found for id: yelp_bJAY2baMKSTlWRc-QZGopQ
+INFO: shared.vector_store: [CHROMADB] Fetching items by id: yelp_bJAY2baMKSTlWRc-QZGopQ
+ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+INFO: shared.vector_store: [CHROMADB] No items record found for id: yelp_bJAY2baMKSTlWRc-QZGopQ
+WARNING: task_b.retriever: [RETRIEVER] Could not resolve item: bJAY2baMKSTlWRc-QZGopQ
 INFO: shared.vector_store: [CHROMADB] Fetching items by id: MKHJy86fkFnMAhZac6wuLw
 ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
 INFO: shared.vector_store: [CHROMADB] No items record found for id: MKHJy86fkFnMAhZac6wuLw
+INFO: shared.vector_store: [CHROMADB] Fetching items by id: yelp_MKHJy86fkFnMAhZac6wuLw
+ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+INFO: shared.vector_store: [CHROMADB] No items record found for id: yelp_MKHJy86fkFnMAhZac6wuLw
+INFO: shared.vector_store: [CHROMADB] Fetching items by id: yelp_MKHJy86fkFnMAhZac6wuLw
+ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+INFO: shared.vector_store: [CHROMADB] No items record found for id: yelp_MKHJy86fkFnMAhZac6wuLw
+WARNING: task_b.retriever: [RETRIEVER] Could not resolve item: MKHJy86fkFnMAhZac6wuLw
 INFO: shared.vector_store: [CHROMADB] Fetching items by id: vCHNWdW-ys-nWUx3Cpvk8Q
 ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
 INFO: shared.vector_store: [CHROMADB] No items record found for id: vCHNWdW-ys-nWUx3Cpvk8Q
+INFO: shared.vector_store: [CHROMADB] Fetching items by id: yelp_vCHNWdW-ys-nWUx3Cpvk8Q
+ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+INFO: shared.vector_store: [CHROMADB] No items record found for id: yelp_vCHNWdW-ys-nWUx3Cpvk8Q
+INFO: shared.vector_store: [CHROMADB] Fetching items by id: yelp_vCHNWdW-ys-nWUx3Cpvk8Q
+ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+INFO: shared.vector_store: [CHROMADB] No items record found for id: yelp_vCHNWdW-ys-nWUx3Cpvk8Q
+WARNING: task_b.retriever: [RETRIEVER] Could not resolve item: vCHNWdW-ys-nWUx3Cpvk8Q
 INFO: shared.vector_store: [CHROMADB] Fetching items by id: 9gObo5ltOMo6UgsaXaHPWA
 ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
 INFO: shared.vector_store: [CHROMADB] No items record found for id: 9gObo5ltOMo6UgsaXaHPWA
+INFO: shared.vector_store: [CHROMADB] Fetching items by id: yelp_9gObo5ltOMo6UgsaXaHPWA
+ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+INFO: shared.vector_store: [CHROMADB] No items record found for id: yelp_9gObo5ltOMo6UgsaXaHPWA
+INFO: shared.vector_store: [CHROMADB] Fetching items by id: yelp_9gObo5ltOMo6UgsaXaHPWA
+ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+INFO: shared.vector_store: [CHROMADB] No items record found for id: yelp_9gObo5ltOMo6UgsaXaHPWA
+WARNING: task_b.retriever: [RETRIEVER] Could not resolve item: 9gObo5ltOMo6UgsaXaHPWA
 INFO: shared.vector_store: [CHROMADB] Fetching items by id: 7FJv2SdCUtYgFpcxMGfP_w
 ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
 INFO: shared.vector_store: [CHROMADB] No items record found for id: 7FJv2SdCUtYgFpcxMGfP_w
+INFO: shared.vector_store: [CHROMADB] Fetching items by id: yelp_7FJv2SdCUtYgFpcxMGfP_w
+ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+INFO: shared.vector_store: [CHROMADB] No items record found for id: yelp_7FJv2SdCUtYgFpcxMGfP_w
+INFO: shared.vector_store: [CHROMADB] Fetching items by id: yelp_7FJv2SdCUtYgFpcxMGfP_w
+ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+INFO: shared.vector_store: [CHROMADB] No items record found for id: yelp_7FJv2SdCUtYgFpcxMGfP_w
+WARNING: task_b.retriever: [RETRIEVER] Could not resolve item: 7FJv2SdCUtYgFpcxMGfP_w
 INFO: shared.vector_store: [CHROMADB] Fetching items by id: hMcgO98QaOFmQVTfCUeGzw
 ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
 INFO: shared.vector_store: [CHROMADB] No items record found for id: hMcgO98QaOFmQVTfCUeGzw
+INFO: shared.vector_store: [CHROMADB] Fetching items by id: yelp_hMcgO98QaOFmQVTfCUeGzw
+ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+INFO: shared.vector_store: [CHROMADB] No items record found for id: yelp_hMcgO98QaOFmQVTfCUeGzw
+INFO: shared.vector_store: [CHROMADB] Fetching items by id: yelp_hMcgO98QaOFmQVTfCUeGzw
+ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+INFO: shared.vector_store: [CHROMADB] No items record found for id: yelp_hMcgO98QaOFmQVTfCUeGzw
+WARNING: task_b.retriever: [RETRIEVER] Could not resolve item: hMcgO98QaOFmQVTfCUeGzw
 INFO: shared.vector_store: [CHROMADB] Fetching items by id: R-HCwu9UbasUudG1yTM1Ow
 ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
 INFO: shared.vector_store: [CHROMADB] No items record found for id: R-HCwu9UbasUudG1yTM1Ow
+INFO: shared.vector_store: [CHROMADB] Fetching items by id: yelp_R-HCwu9UbasUudG1yTM1Ow
+ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+INFO: shared.vector_store: [CHROMADB] No items record found for id: yelp_R-HCwu9UbasUudG1yTM1Ow
+INFO: shared.vector_store: [CHROMADB] Fetching items by id: yelp_R-HCwu9UbasUudG1yTM1Ow
+ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+INFO: shared.vector_store: [CHROMADB] No items record found for id: yelp_R-HCwu9UbasUudG1yTM1Ow
+WARNING: task_b.retriever: [RETRIEVER] Could not resolve item: R-HCwu9UbasUudG1yTM1Ow
 INFO: shared.vector_store: [CHROMADB] Fetching items by id: rm2XUoqkJn-d5gByPUwamw
 ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
 INFO: shared.vector_store: [CHROMADB] No items record found for id: rm2XUoqkJn-d5gByPUwamw
+INFO: shared.vector_store: [CHROMADB] Fetching items by id: yelp_rm2XUoqkJn-d5gByPUwamw
+ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+INFO: shared.vector_store: [CHROMADB] No items record found for id: yelp_rm2XUoqkJn-d5gByPUwamw
+INFO: shared.vector_store: [CHROMADB] Fetching items by id: yelp_rm2XUoqkJn-d5gByPUwamw
+ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
+INFO: shared.vector_store: [CHROMADB] No items record found for id: yelp_rm2XUoqkJn-d5gByPUwamw
+WARNING: task_b.retriever: [RETRIEVER] Could not resolve item: rm2XUoqkJn-d5gByPUwamw
 INFO: task_b.retriever: [RETRIEVER] Querying items for category=restaurants query=category restaurants platform yelp
 ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event ClientCreateCollectionEvent: capture() takes 1 positional argument but 3 were given
 INFO: shared.vector_store: [CHROMADB] Querying for user_id: None
@@ -204,8 +311,27 @@ ERROR: chromadb.telemetry.product.posthog: Failed to send telemetry event Client
 INFO: shared.vector_store: [CHROMADB] Querying for user_id: None
 INFO: shared.vector_store: [CHROMADB] Query result count: 15
 INFO: task_b.retriever: [RETRIEVER] Fallback query returned 15 candidates
-INFO:     127.0.0.1:59560 - "POST /recommend HTTP/1.1" 200 OK
-
+INFO: shared.llm_client: [LLM] Gemini client initialized with key: AIzaSyAi...
+INFO: task_b.ranker: [RANKER] Calling LLM for 30 candidates
+INFO: shared.llm_client: [LLM] Sending request: max_output_tokens=2048
+INFO: google_genai.models: AFC is enabled with max remote calls: 10.
+INFO: httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent "HTTP/1.1 200 OK"
+INFO: shared.llm_client: [LLM] Response: 236 chars, finish_reason=FinishReason.MAX_TOKENS
+ERROR: task_b.ranker: [RANKER] LLM failed: Unterminated string starting at: line 6 column 20 (char 106)
+Traceback (most recent call last):
+  File "C:\Users\DanielsFega\Hackathons\bcthack\task_b\ranker.py", line 56, in rerank
+    parsed = json.loads(self._extract_json_payload(response))
+  File "C:\Program Files\Python313\Lib\json\__init__.py", line 346, in loads 
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Program Files\Python313\Lib\json\decoder.py", line 345, in decode 
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python313\Lib\json\decoder.py", line 361, in raw_decode
+    obj, end = self.scan_once(s, idx)
+               ~~~~~~~~~~~~~~^^^^^^^^
+json.decoder.JSONDecodeError: Unterminated string starting at: line 6 column 20 (char 106)
+INFO:     127.0.0.1:64566 - "POST /recommend HTTP/1.1" 200 OK
 
 Test 2 — Cold User (no history, Nigerian mode)
 {

@@ -85,6 +85,17 @@ def inspect_items(client: chromadb.PersistentClient, available: set[str]) -> Non
                 f"ID: {item_id} | name: {meta.get('name')} | "
                 f"category: {meta.get('category')} | platform: {meta.get('platform')}"
             )
+
+        print("\n=== FOOD ITEM QUERY ===")
+        results = items.query(
+            query_texts=["restaurant food dining"],
+            n_results=10,
+        )
+        query_ids = results.get("ids", [[]])[0]
+        query_metas = results.get("metadatas", [[]])[0]
+        for item_id, meta in zip(query_ids, query_metas):
+            meta = meta or {}
+            print(f"{item_id} | {meta.get('name')} | {meta.get('category')}")
     except InvalidCollectionException:
         print("Collection 'items' is unavailable.")
 
@@ -119,6 +130,7 @@ def inspect_reviews(client: chromadb.PersistentClient, available: set[str]) -> N
 
     except InvalidCollectionException:
         print("Collection 'reviews' is unavailable.")
+
 
 def print_ingestion_status(available: set[str]) -> None:
     """Prints a clearer summary of whether ingestion appears complete."""
