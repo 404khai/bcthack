@@ -4,23 +4,24 @@
 from __future__ import annotations
 
 import json
+import logging
 from os import getenv
 
-from shared.llm_client import AnthropicLLMClient
+from shared.llm_client import GeminiLLMClient
 from shared.prompts import TASK_B_CONVERSATION_SUMMARY_SYSTEM, TASK_B_CONVERSATION_SUMMARY_USER
 from task_b.schemas import Turn
 
-CLAUDE_MODEL_NAME = "claude-sonnet-4-20250514"
+logger = logging.getLogger(__name__)
 
 
 class ConversationManager:
     """Stores session turns in memory and summarizes refined preferences."""
 
-    def __init__(self, llm_client: AnthropicLLMClient | None = None) -> None:
+    def __init__(self, llm_client: GeminiLLMClient | None = None) -> None:
         self._sessions: dict[str, list[Turn]] = {}
         self._llm_client = llm_client
 
-    def add_turn(
+    async def add_turn(
         self,
         session_id: str,
         user_msg: str,
@@ -49,13 +50,12 @@ class ConversationManager:
         )
         if client is not None:
             try:
-                response = await client.generate_text(
-                    system_prompt=TASK_B_CONVERSATION_SUMMARY_SYSTEM,
-                    user_prompt=TASK_B_CONVERSATION_SUMMARY_USER.format(
+                response = await client.complete(
+                    system=TASK_B_CONVERSATION_SUMMARY_SYSTEM,
+                    user=TASK_B_CONVERSATION_SUMMARY_USER.format(
                         conversation_history=history_text
                     ),
-                    max_tokens=180,
-                    temperature=0.2,
+                    max_tokens=1024,
                 )
                 parsed = json.loads(response)
                 if isinstance(parsed, dict):
@@ -63,8 +63,8 @@ class ConversationManager:
                         str(key): max(0.0, min(1.0, float(value)))
                         for key, value in parsed.items()
                     }
-            except Exception:
-                pass
+            except Exception as error:
+                logger.warning("[CONVERSATION] Preference summarization failed: %s", error)
 
         preference_counts: dict[str, float] = {}
         for turn in history:
@@ -81,10 +81,10 @@ class ConversationManager:
         """Removes a session and all of its stored turns."""
         self._sessions.pop(session_id, None)
 
-    def _get_llm_client(self) -> AnthropicLLMClient | None:
+    def _get_llm_client(self) -> GeminiLLMClient | None:
         if self._llm_client is not None:
             return self._llm_client
-        if not getenv("ANTHROPIC_API_KEY"):
+        if not getenv("GEMINI_API_KEY"):
             return None
-        self._llm_client = AnthropicLLMClient(model=CLAUDE_MODEL_NAME)
+        self._llm_client = GeminiLLMClient()
         return self._llm_client
