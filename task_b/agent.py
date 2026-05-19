@@ -229,6 +229,11 @@ class RecommendationAgent:
             category=retrieval_category or request.query,
             top_k=max(10, request.top_k * 3),
         )
+        resolved_history = [
+            item for item in history_candidates
+            if item.title and item.title != item.item_id
+        ]
+        unresolved_ratio = 1 - (len(resolved_history) / max(len(history_candidates), 1))
         content_attributes = dict(context.item_attributes)
         if retrieval_category:
             content_attributes.setdefault("category", retrieval_category)
@@ -240,6 +245,23 @@ class RecommendationAgent:
             item_attributes=content_attributes or {"query": request.query},
             top_k=max(10, request.top_k * 3),
         )
+        semantic_notes: list[str] = []
+        if history_candidates and unresolved_ratio > 0.5:
+            logger.info(
+                "[AGENT_B] %.0f%% history unresolved, switching to semantic",
+                unresolved_ratio * 100,
+            )
+            semantic = await self.retriever.retrieve_semantic_candidates(
+                query_text=f"{request.query} {' '.join(preferred_categories)}".strip(),
+                category=request.request_context.category or retrieval_category,
+                top_k=15,
+            )
+            content_candidates = self._deduplicate_candidates(list(chain(content_candidates, [
+                self.retriever._candidate_to_item(candidate) for candidate in semantic
+            ])))
+            semantic_notes.append(
+                f"Think: {unresolved_ratio * 100:.0f}% of history items could not be resolved, so semantic item search was added."
+            )
         if not content_candidates:
             raw_candidates = await self.retriever.retrieve_candidates(
                 user_id=request.user_persona.user_id,
@@ -290,6 +312,7 @@ class RecommendationAgent:
             f"Think: top candidate is {deduped[0].title if deduped else 'none'}.",
         ]
         retrieval_notes.extend(cross_domain_notes)
+        retrieval_notes.extend(semantic_notes)
 
         if not deduped or (not is_warm and len(deduped) < request.top_k):
             fallback_candidates = await self.cold_start.handle(

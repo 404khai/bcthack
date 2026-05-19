@@ -1,172 +1,190 @@
 <context>
-Task B is now querying real ChromaDB data but has 4 remaining bugs.
+task_b/ranker.py has two bugs confirmed from logs.
 
-CONFIRMED FROM LOGS:
-
-BUG 1 — item_id prefix mismatch in history retrieval (Tests 1 & 2)
-  Reviews store item_id as raw ID: "L3V21nAe-CicW2bvtNWa0g"
-  Items collection stores as: "yelp_L3V21nAe-CicW2bvtNWa0g"
-  Lookup fails → title="L3V21nAe-CicW2bvtNWa0g", category="unknown"
+BUG 1 — MAX_TOKENS truncates JSON response from Gemini
+  Log: "Response: 236 chars, finish_reason=FinishReason.MAX_TOKENS"
+  Log: "JSONDecodeError: Unterminated string starting at line 6 col 20"
   
-  Log evidence:
-    "[CHROMADB] No items record found for id: L3V21nAe-CicW2bvtNWa0g"
+  Cause: ranker sends 30 candidates asking for JSON array back.
+  Each JSON item needs ~150-200 tokens minimum. 30 items × 200 = 6000 
+  tokens needed but only 2048 provided. JSON gets cut mid-string.
+  
+  Fix A: reduce candidates sent to LLM from 30 to maximum 8
+  Fix B: increase max_tokens to 4096
+  Fix C: add JSON repair before parsing — if JSON is truncated, 
+         attempt to salvage whatever complete items exist
 
-BUG 2 — Negative similarity scores (Tests 3 & 4)
-  similarity_score: -0.234, score: -2.34
-  ChromaDB returns cosine distances. Current formula: 1 - distance
-  When distance > 1, similarity goes negative.
-  Correct formula: max(0.0, 1.0 - (distance / 2.0))
-  Or simpler: clamp to [0, 1]: max(0.0, min(1.0, 1.0 - distance))
+BUG 2 — Item resolution fails for most history items
+  Reviews store item_ids like "L3V21nAe-CicW2bvtNWa0g" (raw Yelp ID)
+  Items collection only has 327 businesses from the sample.
+  Most reviewed businesses are NOT in the items collection.
+  
+  Fix: when item cannot be resolved from items collection,
+  fall back to semantic search — query the items collection 
+  using the user's query text and categories instead of 
+  trying to resolve specific item IDs.
 
-BUG 3 — LLM ranker not generating real explanations
-  All explanations follow this template:
-  "{name} fits the request because it aligns with {category} 
-   and the user's known preferences."
-  This means the LLM ranker is not being called or its output
-  is being discarded and the template is used as fallback.
-
-BUG 4 — top_categories parsed as ['unknown']
-  ChromaDB metadata stores: top_categories="Grocery, Arts & Crafts"
-  Agent reads it but produces: ['unknown']
-  The field name in metadata is "top_categories" (from to_metadata())
-  but agent may be reading "preferred_categories" or similar.
-
-Files to fix:
-[PASTE task_b/retriever.py]
-[PASTE task_b/ranker.py]
-[PASTE task_b/agent.py]
-[PASTE shared/vector_store.py]
+Current ranker.py is attached above.
 </context>
 
 <fixes>
 
-FIX 1 — task_b/retriever.py: prefix item_id before lookup
+FIX 1 — ranker.py: limit candidates and fix JSON parsing
 
-In retrieve_user_history_items(), after getting item_id from 
-review metadata, attempt lookup with platform prefix:
+In the rerank() method, change this line:
+  candidates=[candidate.model_dump() for candidate in candidates[:20]],
+To:
+  candidates=[candidate.model_dump() for candidate in candidates[:8]],
 
-  raw_item_id = (m or {}).get("item_id", "")
-  platform = (m or {}).get("platform", "")
+Change max_tokens from 2048 to 4096:
+  response = await client.complete(
+      system=...,
+      user=...,
+      max_tokens=4096,   # was 2048
+  )
+
+Replace _extract_json_payload() with a more robust version that 
+salvages partial JSON:
+
+  def _extract_json_payload(self, response: str) -> str:
+      cleaned = response.strip()
+      # Strip markdown fencing
+      if cleaned.startswith("```json"):
+          cleaned = cleaned[7:]
+      elif cleaned.startswith("```"):
+          cleaned = cleaned[3:]
+      if cleaned.endswith("```"):
+          cleaned = cleaned[:-3]
+      cleaned = cleaned.strip()
+      
+      # Find the JSON array boundaries
+      start = cleaned.find("[")
+      if start == -1:
+          return "[]"
+      
+      # Try full parse first
+      candidate = cleaned[start:]
+      try:
+          json.loads(candidate)
+          return candidate
+      except json.JSONDecodeError:
+          pass
+      
+      # Salvage complete objects from truncated array
+      # Find all complete {...} objects within the array
+      salvaged = []
+      depth = 0
+      obj_start = None
+      i = start + 1  # skip opening [
+      while i < len(candidate):
+          ch = candidate[i]
+          if ch == '{':
+              if depth == 0:
+                  obj_start = i
+              depth += 1
+          elif ch == '}':
+              depth -= 1
+              if depth == 0 and obj_start is not None:
+                  obj_str = candidate[obj_start:i+1]
+                  try:
+                      json.loads(obj_str)
+                      salvaged.append(obj_str)
+                  except json.JSONDecodeError:
+                      pass
+                  obj_start = None
+          i += 1
+      
+      if salvaged:
+          logger.warning("[RANKER] Salvaged %d complete objects from truncated JSON",
+                         len(salvaged))
+          return "[" + ",".join(salvaged) + "]"
+      
+      logger.error("[RANKER] Could not salvage any JSON objects from response")
+      return "[]"
+
+FIX 2 — task_b/retriever.py: add semantic fallback when items not found
+
+After retrieve_user_history_items() exhausts all ID candidates and 
+most items are unresolved, add a semantic fallback that queries 
+the items collection directly by embedding similarity:
+
+  async def retrieve_semantic_candidates(
+      self,
+      query_text: str,
+      category: str,
+      top_k: int = 15,
+  ) -> list[dict]:
+      """Semantic search over items collection as fallback."""
+      logger.info("[RETRIEVER] Semantic fallback query: %s", query_text[:60])
+      
+      try:
+          results = self.vector_store.query(
+              collection_name="items",
+              query_texts=[query_text],
+              n_results=top_k,
+          )
+          ids = results.get("ids", [[]])[0]
+          metas = results.get("metadatas", [[]])[0]
+          distances = results.get("distances", [[]])[0]
+          docs = results.get("documents", [[]])[0]
+          
+          candidates = []
+          for item_id, meta, dist, doc in zip(ids, metas, distances, docs):
+              if not doc or not str(doc).strip():
+                  continue
+              similarity = max(0.0, min(1.0, 1.0 - (dist / 2.0)))
+              candidates.append({
+                  "item_id": item_id,
+                  "title": (meta or {}).get("name", item_id),
+                  "category": (meta or {}).get("category", category),
+                  "source": "semantic_fallback",
+                  "similarity_score": round(similarity, 3),
+                  "metadata": meta or {},
+              })
+          
+          logger.info("[RETRIEVER] Semantic fallback returned %d candidates",
+                      len(candidates))
+          return candidates
+      except Exception as e:
+          logger.error("[RETRIEVER] Semantic fallback failed: %s", e)
+          return []
+
+In task_b/agent.py, update the warm user path to use semantic 
+fallback when history items resolve poorly:
+
+  # After getting history_items
+  resolved = [i for i in history_items if i.get("title") != i.get("item_id")]
+  unresolved_ratio = 1 - (len(resolved) / max(len(history_items), 1))
   
-  # Build candidate IDs to try for item lookup
-  item_id_candidates = [raw_item_id]
-  if platform and not raw_item_id.startswith(f"{platform}_"):
-      item_id_candidates.append(f"{platform}_{raw_item_id}")
-  # Also try yelp_ prefix as default for Yelp users
-  if not raw_item_id.startswith("yelp_"):
-      item_id_candidates.append(f"yelp_{raw_item_id}")
-  
-  # Try each candidate to resolve item name and category
-  resolved_item = None
-  for candidate_id in item_id_candidates:
-      item_record = self.vector_store.get_item_by_id(candidate_id)
-      if item_record and item_record.get("metadata"):
-          resolved_item = item_record
-          break
-  
-  if resolved_item:
-      meta = resolved_item["metadata"]
-      result = {
-          "item_id": resolved_item["id"],
-          "title": meta.get("name", candidate_id),
-          "category": meta.get("category", "unknown"),
-          "source": "user_history",
-          "similarity_score": 0.82,
-          "metadata": meta,
-      }
-  else:
-      # Keep raw but log the miss
-      logger.warning("[RETRIEVER] Could not resolve item: %s", raw_item_id)
-      result = {
-          "item_id": raw_item_id,
-          "title": raw_item_id,
-          "category": "unknown",
-          "source": "user_history_unresolved",
-          "similarity_score": 0.82,
-          "metadata": {"rating": float((m or {}).get("rating", 3.0))},
-      }
-
-FIX 2 — shared/vector_store.py OR task_b/retriever.py: 
-fix similarity score formula
-
-Wherever distances from ChromaDB are converted to similarity scores,
-replace:
-  similarity = 1 - distance
-With:
-  similarity = max(0.0, min(1.0, 1.0 - (distance / 2.0)))
-
-Also update score calculation in ranker/agent:
-  score = similarity * 10   # scale to 0-10
-  # clamp: score = max(0.0, min(10.0, score))
-
-FIX 3 — task_b/ranker.py: fix LLM reranking
-
-The ranker must call Gemini to generate a real explanation per item.
-Current behavior: template string used for every item.
-
-Check why LLM is not being called. Most likely:
-  a) ranker._get_llm_client() returns None (same dotenv issue)
-  b) The ranked output is parsed incorrectly and falls back to template
-
-Fix the ranker's explain() or rerank() method:
-  - Add: from dotenv import load_dotenv; load_dotenv(override=True)
-    at top of ranker.py
-  - Add log: logger.info("[RANKER] Calling LLM for %d candidates", 
-                         len(candidates))
-  - Add log: logger.info("[RANKER] LLM explanation sample: %s", 
-                         explanation[:100])
-  - If LLM call fails, log the error explicitly:
-    logger.error("[RANKER] LLM failed: %s", e, exc_info=True)
-  - The explanation prompt must instruct Gemini:
-    "For each item, write 2-3 sentences explaining WHY this specific
-     item matches this specific user's preferences. Reference the 
-     item's actual name, category, and the user's known interests.
-     Do not use generic phrases like 'aligns with preferences'."
-
-FIX 4 — task_b/agent.py: fix top_categories parsing
-
-When fetching user metadata from ChromaDB, the field is stored as
-a comma-separated string in "top_categories" key.
-
-Replace whatever current parsing is with:
-  raw_cats = user_metadata.get("top_categories", "") or \
-             user_metadata.get("preferred_categories", "") or ""
-  top_categories = [c.strip() for c in raw_cats.split(",") 
-                    if c.strip() and c.strip().lower() != "unknown"]
-  
-  if not top_categories:
-      # fallback: use platform defaults
-      top_categories = ["restaurants"] if platform == "yelp" else \
-                       ["Electronics"] if platform == "amazon" else \
-                       ["fiction", "to-read"]
-  
-  logger.info("[AGENT_B] Resolved categories: %s", top_categories)
-
-Update thinking to show real categories:
-  f"Plan: top categories from history are {top_categories}."
+  if unresolved_ratio > 0.5:
+      # More than 50% unresolved — use semantic search instead
+      logger.info("[AGENT_B] %.0f%% history unresolved, switching to semantic",
+                  unresolved_ratio * 100)
+      semantic = await self.retriever.retrieve_semantic_candidates(
+          query_text=f"{request.query} {' '.join(top_categories)}",
+          category=request.request_context.category,
+          top_k=15,
+      )
+      candidates.extend(semantic)
 
 <constraints>
-- similarity_score must always be in range [0.0, 1.0]
-- score must always be positive (0.0 to 10.0)
-- item title must never equal item_id (resolve from ChromaDB)
-- explanation must be LLM-generated, not a template
-- load_dotenv(override=True) at top of ranker.py
+- Max candidates sent to LLM ranker: 8 (not 20 or 30)
+- max_tokens for ranker LLM call: 4096
+- JSON salvage must never raise an exception — always return 
+  valid JSON string (at minimum "[]")
+- Semantic fallback similarity formula: max(0.0, min(1.0, 1-(dist/2)))
 - Output all changed files in full with path headers
 - No truncation
 </constraints>
 
 <expected_after_fix>
-Test 1 response:
-  item_id: "yelp_L3V21nAe-CicW2bvtNWa0g"   ← prefixed
-  title: "Joe's Diner"                        ← real name from items collection
-  category: "Restaurants"                     ← real category
-  similarity_score: 0.73                      ← positive, 0-1
-  score: 7.3                                  ← positive, 0-10
-  explanation: "Joe's Diner is a strong match because you've previously 
-    reviewed similar casual dining spots and tend to rate mid-range 
-    restaurants highly. The Restaurants category aligns with your top 
-    preference area."                          ← LLM generated
-  
-thinking:
-  "Plan: top categories from history are ['Grocery', 'Arts & Crafts']"
+Logs should show:
+  [RANKER] Calling LLM for 8 candidates    ← not 30
+  [LLM] Response: 1240 chars, finish_reason=FinishReason.STOP  ← STOP not MAX_TOKENS
+  [RANKER] LLM explanation sample: "Octopus Falafel Truck is an excellent..."
+  [AGENT_B] 87% history unresolved, switching to semantic
+  [RETRIEVER] Semantic fallback returned 15 candidates
+
+Response item_ids should include real names like "Octopus Falafel Truck"
+with genuine LLM-generated explanations.
 </expected_after_fix>
