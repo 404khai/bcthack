@@ -7,9 +7,11 @@ load_dotenv(override=True)
 
 import asyncio
 import logging
+import re
 from os import getenv
 
 from google import genai
+from google.genai.errors import ClientError
 from google.genai import types
 from google.api_core.exceptions import ResourceExhausted
 
@@ -18,6 +20,9 @@ logger = logging.getLogger(__name__)
 
 class GeminiLLMClient:
     """Async Gemini client with bounded retries for transient errors."""
+
+    _free_tier_lock: asyncio.Lock | None = None
+    _next_free_tier_slot: float = 0.0
 
     def __init__(self, api_key: str | None = None, model: str | None = None) -> None:
         resolved_api_key = api_key or getenv("GEMINI_API_KEY")
@@ -46,11 +51,14 @@ class GeminiLLMClient:
         delay_seconds = 1.0
         last_error: Exception | None = None
         effective_max_tokens = max(max_tokens, 1024)
+        rate_limit_retry_used = False
+        attempt = 0
 
-        for attempt in range(1, retries + 1):
+        while True:
+            attempt += 1
             try:
                 if self.free_tier_mode:
-                    await asyncio.sleep(1.0)
+                    await self._apply_free_tier_throttle()
                 logger.info("[LLM] Sending request: max_output_tokens=%d", effective_max_tokens)
 
                 def _generate():
@@ -84,9 +92,28 @@ class GeminiLLMClient:
                 return full_text
             except ResourceExhausted as error:
                 last_error = error
+                if rate_limit_retry_used:
+                    logger.warning("[LLM] Rate limit persisted after retry; allowing caller fallback.")
+                    break
+                rate_limit_retry_used = True
+                wait_seconds = self._extract_retry_delay_seconds(error, default=35.0)
+                logger.warning("[LLM] Rate limit hit. Waiting %.1fs before one final retry...", wait_seconds)
+                await asyncio.sleep(min(wait_seconds, 40.0))
+                continue
+            except ClientError as error:
+                last_error = error
+                if self._is_rate_limit_error(error):
+                    if rate_limit_retry_used:
+                        logger.warning("[LLM] Rate limit persisted after retry; allowing caller fallback.")
+                        break
+                    rate_limit_retry_used = True
+                    wait_seconds = self._extract_retry_delay_seconds(error, default=35.0)
+                    logger.warning("[LLM] Rate limit hit. Waiting %.1fs before one final retry...", wait_seconds)
+                    await asyncio.sleep(min(wait_seconds, 40.0))
+                    continue
                 if attempt == retries:
                     break
-                logger.warning(f"Rate limit hit. Retrying in {delay_seconds}s...")
+                logger.warning("Error calling Gemini API: %s. Retrying in %.1fs...", error, delay_seconds)
                 await asyncio.sleep(delay_seconds)
                 delay_seconds *= 2
             except Exception as error:
@@ -95,11 +122,17 @@ class GeminiLLMClient:
                 is_rate_limit = "429" in error_str or "quota" in error_str or "exhausted" in error_str
                 
                 last_error = error
+                if is_rate_limit:
+                    if rate_limit_retry_used:
+                        logger.warning("[LLM] Rate limit persisted after retry; allowing caller fallback.")
+                        break
+                    rate_limit_retry_used = True
+                    wait_seconds = self._extract_retry_delay_seconds(error, default=35.0)
+                    logger.warning("[LLM] Rate limit hit. Waiting %.1fs before one final retry...", wait_seconds)
+                    await asyncio.sleep(min(wait_seconds, 40.0))
+                    continue
                 if attempt == retries:
                     break
-                    
-                if is_rate_limit:
-                    logger.warning(f"Rate limit hit. Retrying in {delay_seconds}s...")
                 else:
                     logger.warning(f"Error calling Gemini API: {error}. Retrying in {delay_seconds}s...")
                     
@@ -110,6 +143,35 @@ class GeminiLLMClient:
 
     async def complete(self, system: str, user: str, max_tokens: int = 1024) -> str:
         return await self.generate_text(system, user, max_tokens=max_tokens)
+
+    def _is_rate_limit_error(self, error: Exception) -> bool:
+        """Returns True when the exception indicates a rate-limit or quota response."""
+        error_text = str(error).lower()
+        return "429" in error_text or "resource_exhausted" in error_text or "quota" in error_text
+
+    def _extract_retry_delay_seconds(self, error: Exception, default: float) -> float:
+        """Extracts a retry delay from Gemini quota messages."""
+        match = re.search(r"retry in ([\d.]+)s", str(error), flags=re.IGNORECASE)
+        if match:
+            try:
+                return float(match.group(1))
+            except ValueError:
+                return default
+        return default
+
+    async def _apply_free_tier_throttle(self) -> None:
+        """Spaces out all free-tier requests across client instances."""
+        if GeminiLLMClient._free_tier_lock is None:
+            GeminiLLMClient._free_tier_lock = asyncio.Lock()
+        async with GeminiLLMClient._free_tier_lock:
+            loop = asyncio.get_running_loop()
+            now = loop.time()
+            wait_seconds = max(0.0, GeminiLLMClient._next_free_tier_slot - now)
+            if wait_seconds > 0:
+                logger.info("[LLM] FREE_TIER_MODE throttling for %.1fs", wait_seconds)
+                await asyncio.sleep(wait_seconds)
+                now = loop.time()
+            GeminiLLMClient._next_free_tier_slot = now + 3.0
 
 
 # Backward-compatible alias for older imports that still reference the old name.

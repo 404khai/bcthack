@@ -98,7 +98,7 @@ class RecommendationAgent:
         )
         final_ranked = ranked[: request.top_k]
         if request.session_id and persist_turn:
-            self.conversation.add_turn(
+            await self.conversation.add_turn(
                 session_id=request.session_id,
                 user_msg=request.query,
                 assistant_msg=self._format_assistant_message(final_ranked),
@@ -134,7 +134,7 @@ class RecommendationAgent:
         )
         refined_preferences = await self.conversation.extract_refined_preferences(request.session_id)
         assistant_message = self._format_chat_message(recommend_response.recommendations)
-        self.conversation.add_turn(
+        await self.conversation.add_turn(
             session_id=request.session_id,
             user_msg=request.message,
             assistant_msg=assistant_message,
