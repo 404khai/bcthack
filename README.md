@@ -41,6 +41,9 @@ source venv/bin/activate
 # Install all dependencies
 pip install -r task_a/requirements.txt
 pip install -r task_b/requirements.txt
+
+# Install evaluation-only dependencies when needed
+pip install -r eval/requirements.txt
 ```
 
 ### API Keys
@@ -224,6 +227,9 @@ curl -X POST "http://localhost:8002/recommend" \
 ### Task A Evaluation
 
 ```bash
+# Install eval extras first
+pip install -r eval/requirements.txt
+
 # Run Task A evaluation
 python -m eval.run_task_a_eval
 
@@ -237,6 +243,9 @@ python -m eval.run_task_a_eval
 ### Task B Evaluation
 
 ```bash
+# Install eval extras first
+pip install -r eval/requirements.txt
+
 # Run Task B evaluation
 python -m eval.run_task_b_eval
 
@@ -272,6 +281,7 @@ python -m eval.run_task_b_eval
 - **Security**: Non-root users in runtime stage
 - **Reproducibility**: Consistent builds across environments
 - **Health checks**: Automatic monitoring of service health
+- **Faster rebuilds**: pip cache and CPU-only torch avoid repeated heavyweight ML downloads
 
 ## Known Limitations
 

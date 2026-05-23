@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.7
 # Multi-stage build for Task A User Modeling Service
 
 # Stage 1: Builder stage
@@ -6,6 +7,7 @@ FROM python:3.11-slim AS builder
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
+ENV TORCH_VERSION=2.5.1
 
 WORKDIR /app
 
@@ -21,8 +23,10 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 # Install Python dependencies
 COPY task_a/requirements.txt /tmp/task_a_requirements.txt
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r /tmp/task_a_requirements.txt
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --upgrade pip && \
+    pip install --index-url https://download.pytorch.org/whl/cpu "torch==${TORCH_VERSION}" && \
+    pip install -r /tmp/task_a_requirements.txt
 
 # Stage 2: Runtime stage
 FROM python:3.11-slim AS runtime
