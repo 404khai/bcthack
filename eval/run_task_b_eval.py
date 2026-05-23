@@ -1,447 +1,465 @@
-"""Task B evaluation harness.
+"""Task B evaluation script using real ChromaDB users and held-out reviews."""
 
-Loads test users from splits.json, calls Task B service, gets top-10 recommendations,
-computes NDCG@10 and Hit Rate vs held-out items, tests cold-start users.
-"""
+from dotenv import load_dotenv
 
-from __future__ import annotations
+load_dotenv(override=True)
 
-import asyncio
+import argparse
 import json
 import logging
+import math
+import os
 import sys
-from dataclasses import dataclass
+import time
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-import aiohttp
-import numpy as np
-import pandas as pd
-from sklearn.metrics import ndcg_score
-from tqdm import tqdm
+import chromadb
+import requests
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
 
+DEFAULT_BASE_URL = "http://localhost:8002"
+DEFAULT_LIMIT = 20
+DEFAULT_TIMEOUT = 60
+RETRY_WAIT_SECONDS = 35
+PLATFORM_PREFIXES = ("yelp", "amazon", "goodreads")
 
-@dataclass
+
+@dataclass(slots=True)
 class TestUser:
-    """A test user for Task B evaluation."""
+    """Real Task B evaluation user loaded from ChromaDB."""
+
     user_id: str
     platform: str
     review_count: int
-    held_out_items: list[str]  # Item IDs held out for testing
-    is_cold_start: bool = False
-    preferences: dict[str, Any] | None = None
-
-
-@dataclass
-class RecommendationResult:
-    """Recommendation results for a single user."""
-    user_id: str
-    recommended_items: list[str]  # Item IDs in ranked order
-    scores: list[float]
-    explanations: list[str]
-    thinking: str
+    held_out_items: list[str]
+    metadata: dict[str, Any]
     is_cold_start: bool
 
 
-@dataclass
-class EvaluationMetrics:
-    """Evaluation metrics for Task B."""
-    num_users: int
-    num_cold_start: int
+@dataclass(slots=True)
+class RecommendationResult:
+    """Recommendation payload captured from the Task B endpoint."""
+
+    user_id: str
+    platform: str
+    review_count: int
+    held_out_items: list[str]
+    recommended_items: list[str]
+    scores: list[float]
+    explanations: list[str]
+    thinking: list[str]
+    is_cold_start: bool
     ndcg_at_10: float
     hit_rate_at_10: float
-    ndcg_cold_start: float
-    hit_rate_cold_start: float
-    avg_recommendations_per_user: float
-    avg_score: float
 
 
-class TaskBEvaluator:
-    """Task B evaluation harness."""
-    
-    def __init__(self, task_b_url: str = "http://localhost:8002"):
-        self.task_b_url = task_b_url
-        self.session: aiohttp.ClientSession | None = None
-        
-    async def __aenter__(self):
-        self.session = aiohttp.ClientSession()
-        return self
-        
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        if self.session:
-            await self.session.close()
-            
-    async def call_task_b(self, user: TestUser, category: str = "all") -> RecommendationResult | None:
-        """Call Task B service to get recommendations."""
-        if not self.session:
-            raise RuntimeError("Session not initialized")
-            
-        payload = {
-            "user_id": user.user_id,
-            "platform": user.platform,
-            "category": category,
-            "top_k": 10,
-            "nigerian_mode": False,  # Disable for evaluation consistency
-            "session_id": f"eval_{user.user_id}"
-        }
-        
-        if user.preferences:
-            payload["preferences"] = user.preferences
-            
+@dataclass(slots=True)
+class EvaluationMetrics:
+    """Aggregate ranking metrics for Task B evaluation."""
+
+    users_evaluated: int
+    warm_users: int
+    cold_users: int
+    overall_ndcg_at_10: float
+    overall_hit_rate_at_10: float
+    warm_ndcg_at_10: float
+    warm_hit_rate_at_10: float
+    cold_ndcg_at_10: float
+    cold_hit_rate_at_10: float
+
+
+def parse_args() -> argparse.Namespace:
+    """Parses CLI arguments."""
+    parser = argparse.ArgumentParser(description="Evaluate Task B using real ChromaDB users.")
+    parser.add_argument("--limit", type=int, default=DEFAULT_LIMIT, help="Maximum number of users to evaluate.")
+    parser.add_argument("--base-url", default=DEFAULT_BASE_URL, help="Base URL for the Task B service.")
+    return parser.parse_args()
+
+
+def project_root() -> Path:
+    """Returns the repository root from the eval module path."""
+    return Path(__file__).resolve().parent.parent
+
+
+def normalize_id(value: str) -> str:
+    """Strips known platform prefixes to improve ID matching."""
+    normalized = str(value or "").strip()
+    for prefix in PLATFORM_PREFIXES:
+        token = f"{prefix}_"
+        if normalized.startswith(token):
+            return normalized[len(token) :].lstrip("_")
+    return normalized
+
+
+def build_id_candidates(value: str) -> list[str]:
+    """Generates candidate IDs with and without platform prefixes."""
+    candidates: list[str] = []
+    raw = str(value or "").strip()
+    core = normalize_id(raw)
+
+    for candidate in (raw, core):
+        if candidate and candidate not in candidates:
+            candidates.append(candidate)
+
+    if core:
+        for prefix in PLATFORM_PREFIXES:
+            prefixed = f"{prefix}_{core}"
+            if prefixed not in candidates:
+                candidates.append(prefixed)
+
+    return candidates
+
+
+def safe_int(value: Any, default: int = 0) -> int:
+    """Converts a value to int with a fallback."""
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def safe_float(value: Any, default: float = 0.0) -> float:
+    """Converts a value to float with a fallback."""
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def request_with_retry(method: str, url: str, **kwargs: Any) -> requests.Response:
+    """Executes an HTTP request and retries once on HTTP 429."""
+    response = requests.request(method, url, **kwargs)
+    if response.status_code == 429:
+        logger.warning("Rate limit hit, waiting %ss...", RETRY_WAIT_SECONDS)
+        time.sleep(RETRY_WAIT_SECONDS)
+        response = requests.request(method, url, **kwargs)
+    return response
+
+
+def check_connection(base_url: str) -> None:
+    """Fails fast if the Task B service is unavailable."""
+    try:
+        response = requests.get(f"{base_url}/health", timeout=5)
+        response.raise_for_status()
+        print(f"Connected to Task B at {base_url}")
+    except Exception:
+        print(f"ERROR: Cannot connect to Task B at {base_url}")
+        print("Start it with: uvicorn task_b.main:app --port 8002")
+        print("Or if using Docker: docker compose up task_b")
+        sys.exit(1)
+
+
+def get_collections() -> tuple[Any, Any]:
+    """Creates the Chroma client and returns users and reviews collections."""
+    chroma_path = os.getenv("CHROMA_PERSIST_DIR", "./chroma_data")
+    client = chromadb.PersistentClient(path=chroma_path)
+    return client.get_collection("users"), client.get_collection("reviews")
+
+
+def get_held_out_items(user_id: str, reviews_col: Any) -> list[str]:
+    """Returns normalized held-out item IDs for a user from the test split."""
+    held_out: list[str] = []
+    for candidate in build_id_candidates(user_id):
         try:
-            async with self.session.post(
-                f"{self.task_b_url}/recommend",
-                json=payload,
-                timeout=30
-            ) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    
-                    # Extract item IDs from recommendations
-                    recommended_items = []
-                    scores = []
-                    explanations = []
-                    
-                    for rec in data.get("recommendations", []):
-                        if "item_id" in rec:
-                            recommended_items.append(rec["item_id"])
-                            scores.append(rec.get("score", 0.0))
-                            explanations.append(rec.get("explanation", ""))
-                            
-                    return RecommendationResult(
-                        user_id=user.user_id,
-                        recommended_items=recommended_items,
-                        scores=scores,
-                        explanations=explanations,
-                        thinking=data.get("thinking", ""),
-                        is_cold_start=user.is_cold_start
-                    )
-                else:
-                    logger.error(f"Task B API error: {response.status}")
-                    return None
-        except Exception as e:
-            logger.error(f"Error calling Task B: {e}")
-            return None
-            
-    def compute_ndcg(self, user: TestUser, result: RecommendationResult) -> float:
-        """Compute NDCG@10 for a single user."""
-        if not result.recommended_items or not user.held_out_items:
-            return 0.0
-            
-        # Create relevance scores: 1 if item is in held_out_items, 0 otherwise
-        relevance_scores = []
-        for item_id in result.recommended_items[:10]:  # Consider top 10
-            relevance = 1.0 if item_id in user.held_out_items else 0.0
-            relevance_scores.append(relevance)
-            
-        # Pad to length 10 if needed
-        while len(relevance_scores) < 10:
-            relevance_scores.append(0.0)
-            
-        # Ideal DCG: all held-out items ranked first
-        ideal_relevance = [1.0] * min(len(user.held_out_items), 10)
-        while len(ideal_relevance) < 10:
-            ideal_relevance.append(0.0)
-            
-        # Compute NDCG
-        try:
-            # Use sklearn's ndcg_score which expects 2D arrays
-            ndcg = ndcg_score(
-                [ideal_relevance],
-                [relevance_scores],
-                k=10
-            )
-            return ndcg
-        except:
-            return 0.0
-            
-    def compute_hit_rate(self, user: TestUser, result: RecommendationResult) -> float:
-        """Compute Hit Rate@10 for a single user."""
-        if not result.recommended_items or not user.held_out_items:
-            return 0.0
-            
-        # Check if any held-out item is in top 10 recommendations
-        hits = 0
-        for item_id in result.recommended_items[:10]:
-            if item_id in user.held_out_items:
-                hits += 1
-                
-        # Hit rate: 1 if at least one hit, 0 otherwise
-        return 1.0 if hits > 0 else 0.0
-        
-    def compute_metrics(self, users: list[TestUser], results: list[RecommendationResult]) -> EvaluationMetrics:
-        """Compute aggregate evaluation metrics."""
-        if not results:
-            return EvaluationMetrics(
-                num_users=0,
-                num_cold_start=0,
-                ndcg_at_10=0.0,
-                hit_rate_at_10=0.0,
-                ndcg_cold_start=0.0,
-                hit_rate_cold_start=0.0,
-                avg_recommendations_per_user=0.0,
-                avg_score=0.0
-            )
-            
-        # Map results to users
-        result_map = {r.user_id: r for r in results}
-        
-        # Compute metrics per user
-        ndcg_scores = []
-        hit_rates = []
-        ndcg_cold_scores = []
-        hit_rate_cold_scores = []
-        total_recommendations = 0
-        total_score = 0.0
-        
-        cold_start_count = 0
-        
-        for user in users:
-            result = result_map.get(user.user_id)
-            if not result:
-                continue
-                
-            ndcg = self.compute_ndcg(user, result)
-            hit_rate = self.compute_hit_rate(user, result)
-            
-            ndcg_scores.append(ndcg)
-            hit_rates.append(hit_rate)
-            total_recommendations += len(result.recommended_items)
-            total_score += sum(result.scores) if result.scores else 0.0
-            
-            if user.is_cold_start:
-                cold_start_count += 1
-                ndcg_cold_scores.append(ndcg)
-                hit_rate_cold_scores.append(hit_rate)
-                
-        # Compute aggregates
-        avg_ndcg = np.mean(ndcg_scores) if ndcg_scores else 0.0
-        avg_hit_rate = np.mean(hit_rates) if hit_rates else 0.0
-        avg_ndcg_cold = np.mean(ndcg_cold_scores) if ndcg_cold_scores else 0.0
-        avg_hit_rate_cold = np.mean(hit_rate_cold_scores) if hit_rate_cold_scores else 0.0
-        avg_recommendations = total_recommendations / len(results) if results else 0.0
-        avg_score = total_score / total_recommendations if total_recommendations > 0 else 0.0
-        
-        return EvaluationMetrics(
-            num_users=len(results),
-            num_cold_start=cold_start_count,
-            ndcg_at_10=avg_ndcg,
-            hit_rate_at_10=avg_hit_rate,
-            ndcg_cold_start=avg_ndcg_cold,
-            hit_rate_cold_start=avg_hit_rate_cold,
-            avg_recommendations_per_user=avg_recommendations,
-            avg_score=avg_score
-        )
-        
-    def print_results_table(self, metrics: EvaluationMetrics):
-        """Print formatted results table."""
-        print("\n" + "="*80)
-        print("TASK B EVALUATION RESULTS")
-        print("="*80)
-        
-        print(f"\nUser Statistics:")
-        print(f"{'Total Users':<25} {metrics.num_users}")
-        print(f"{'Cold Start Users':<25} {metrics.num_cold_start}")
-        print(f"{'Avg Recommendations/User':<25} {metrics.avg_recommendations_per_user:.2f}")
-        print(f"{'Avg Recommendation Score':<25} {metrics.avg_score:.4f}")
-        
-        print("\nOverall Performance:")
-        print(f"{'Metric':<20} {'Score':<10}")
-        print(f"{'-'*20} {'-'*10}")
-        print(f"{'NDCG@10':<20} {metrics.ndcg_at_10:.4f}")
-        print(f"{'Hit Rate@10':<20} {metrics.hit_rate_at_10:.4f}")
-        
-        if metrics.num_cold_start > 0:
-            print("\nCold Start Performance:")
-            print(f"{'Metric':<20} {'Score':<10}")
-            print(f"{'-'*20} {'-'*10}")
-            print(f"{'NDCG@10 (Cold)':<20} {metrics.ndcg_cold_start:.4f}")
-            print(f"{'Hit Rate@10 (Cold)':<20} {metrics.hit_rate_cold_start:.4f}")
-            
-        # Interpretation
-        print("\nInterpretation:")
-        if metrics.ndcg_at_10 >= 0.7:
-            print("✓ Excellent ranking quality")
-        elif metrics.ndcg_at_10 >= 0.5:
-            print("✓ Good ranking quality")
-        elif metrics.ndcg_at_10 >= 0.3:
-            print("○ Moderate ranking quality")
-        else:
-            print("○ Needs improvement")
-            
-        if metrics.hit_rate_at_10 >= 0.8:
-            print("✓ Excellent coverage of held-out items")
-        elif metrics.hit_rate_at_10 >= 0.6:
-            print("✓ Good coverage")
-        elif metrics.hit_rate_at_10 >= 0.4:
-            print("○ Moderate coverage")
-        else:
-            print("○ Needs improvement")
-            
-    async def run_evaluation(self, test_users: list[TestUser], max_users: int = 50) -> tuple[EvaluationMetrics, list[RecommendationResult]]:
-        """Run evaluation on test users."""
-        if max_users and len(test_users) > max_users:
-            logger.info(f"Limiting evaluation to {max_users} users")
-            test_users = test_users[:max_users]
-            
-        results = []
-        async with self:
-            for user in tqdm(test_users, desc="Evaluating Task B"):
-                result = await self.call_task_b(user)
-                if result:
-                    results.append(result)
-                    
-        metrics = self.compute_metrics(test_users, results)
-        return metrics, results
+            results = reviews_col.get(where={"user_id": candidate}, limit=50)
+        except Exception:
+            continue
+
+        for metadata in results.get("metadatas") or []:
+            meta = metadata or {}
+            item_id = str(meta.get("item_id") or "").strip()
+            if meta.get("is_test_split") == "true" and item_id:
+                normalized = normalize_id(item_id)
+                if normalized not in held_out:
+                    held_out.append(normalized)
+
+    return held_out
 
 
-def load_test_users(splits_path: Path) -> list[TestUser]:
-    """Load test users from splits.json."""
-    if not splits_path.exists():
-        logger.error(f"splits.json not found at {splits_path}")
-        return []
-        
-    with open(splits_path) as f:
-        splits = json.load(f)
-        
-    # Load users from ChromaDB or from processed data
-    # For now, we'll create mock test users
-    test_users = []
-    
-    # This would normally load from actual data
-    # For the hackathon, we'll create synthetic test users
-    logger.warning("Using synthetic test users - replace with actual data loading")
-    
-    # Create 30 synthetic test users
-    for i in range(30):
-        platform = ["yelp", "amazon", "goodreads"][i % 3]
-        review_count = i % 20 + 1  # 1-20 reviews
-        
-        # Mark users with <3 reviews as cold-start
-        is_cold_start = review_count < 3
-        
-        # Create 3 held-out items per user
-        held_out_items = [f"held_out_{platform}_{i}_{j}" for j in range(3)]
-        
-        # Add some preferences
-        preferences = {
-            "likes": ["fast service", "good value"] if platform == "yelp" else 
-                     ["durable", "easy to use"] if platform == "amazon" else
-                     ["character development", "plot twists"],
-            "dislikes": ["long waits", "poor hygiene"] if platform == "yelp" else
-                        ["complicated setup", "short battery"] if platform == "amazon" else
-                        ["predictable endings", "flat characters"]
-        }
-        
-        test_users.append(TestUser(
-            user_id=f"test_user_{i}",
+def choose_test_users(limit: int) -> list[TestUser]:
+    """Loads real users from ChromaDB and selects warm and cold cohorts."""
+    users_col, reviews_col = get_collections()
+    all_users = users_col.get(limit=394)
+
+    warm_users: list[TestUser] = []
+    cold_users: list[TestUser] = []
+
+    for collection_id, metadata in zip(
+        all_users.get("ids") or [],
+        all_users.get("metadatas") or [],
+        strict=False,
+    ):
+        meta = metadata or {}
+        user_id = str(meta.get("user_id") or collection_id).strip()
+        platform = str(meta.get("platform") or "yelp").strip() or "yelp"
+        review_count = safe_int(meta.get("review_count"), 0)
+        held_out_items = get_held_out_items(user_id, reviews_col)
+
+        if not held_out_items:
+            continue
+
+        entry = TestUser(
+            user_id=user_id,
             platform=platform,
             review_count=review_count,
             held_out_items=held_out_items,
-            is_cold_start=is_cold_start,
-            preferences=preferences
-        ))
-        
-    return test_users
+            metadata=meta,
+            is_cold_start=review_count < 3,
+        )
+
+        if entry.is_cold_start:
+            cold_users.append(entry)
+        else:
+            warm_users.append(entry)
+
+    warm_target = min(15, limit)
+    cold_target = max(0, limit - warm_target)
+
+    selected = warm_users[:warm_target] + cold_users[:cold_target]
+    if len(selected) < limit:
+        overflow = warm_users[warm_target:] + cold_users[cold_target:]
+        selected.extend(overflow[: limit - len(selected)])
+
+    return selected[:limit]
 
 
-async def main():
-    """Main evaluation function."""
-    # Paths
-    project_root = Path(__file__).parent.parent
-    splits_path = project_root / "data" / "splits.json"
-    output_path = project_root / "eval" / "eval_results_task_b.json"
-    
-    # Load test users
-    test_users = load_test_users(splits_path)
-    if not test_users:
-        logger.error("No test users loaded")
-        sys.exit(1)
-        
-    logger.info(f"Loaded {len(test_users)} test users")
-    logger.info(f"Cold-start users: {sum(1 for u in test_users if u.is_cold_start)}")
-    
-    # Run evaluation
-    evaluator = TaskBEvaluator()
-    metrics, results = await evaluator.run_evaluation(test_users, max_users=30)
-    
-    # Print results
-    evaluator.print_results_table(metrics)
-    
-    # Save results
-    output_data = {
-        "evaluation_metrics": {
-            "num_users": metrics.num_users,
-            "num_cold_start": metrics.num_cold_start,
-            "ndcg_at_10": metrics.ndcg_at_10,
-            "hit_rate_at_10": metrics.hit_rate_at_10,
-            "ndcg_cold_start": metrics.ndcg_cold_start,
-            "hit_rate_cold_start": metrics.hit_rate_cold_start,
-            "avg_recommendations_per_user": metrics.avg_recommendations_per_user,
-            "avg_score": metrics.avg_score
+def resolve_category(metadata: dict[str, Any]) -> str:
+    """Resolves a primary request category from user metadata."""
+    top_categories = metadata.get("top_categories", "")
+    if isinstance(top_categories, list):
+        first = str(top_categories[0]).strip() if top_categories else ""
+        return first or "restaurants"
+
+    raw = str(top_categories or "").strip()
+    if not raw:
+        return "restaurants"
+    return raw.split(",")[0].strip() or "restaurants"
+
+
+def build_payload(user: TestUser, top_k: int = 10) -> dict[str, Any]:
+    """Builds the confirmed Task B request payload shape."""
+    category = resolve_category(user.metadata)
+    return {
+        "user_persona": {
+            "user_id": user.user_id,
+            "platform": user.platform,
+            "preferences": {},
+            "history": [],
+            "persona_text": "",
         },
-        "user_results": [
-            {
-                "user_id": r.user_id,
-                "recommended_items": r.recommended_items,
-                "scores": r.scores,
-                "explanations": r.explanations,
-                "thinking": r.thinking,
-                "is_cold_start": r.is_cold_start
-            }
-            for r in results
-        ]
+        "query": "recommend something based on my history",
+        "request_context": {
+            "category": category,
+            "target_domain": "food",
+            "item_attributes": {},
+            "constraints": [],
+        },
+        "top_k": top_k,
+        "session_id": f"eval_{normalize_id(user.user_id)[:8]}",
+        "nigerian_mode": False,
+        "enable_cross_domain": False,
     }
-    
-    with open(output_path, "w") as f:
-        json.dump(output_data, f, indent=2)
-        
-    logger.info(f"Results saved to {output_path}")
-    
-    # Also save as CSV for easy analysis
-    csv_path = project_root / "eval" / "eval_results_task_b.csv"
-    
-    # Flatten results for CSV
-    rows = []
-    for result in results:
-        for idx, (item_id, score, explanation) in enumerate(zip(
-            result.recommended_items,
-            result.scores,
-            result.explanations
-        )):
-            rows.append({
-                "user_id": result.user_id,
-                "rank": idx + 1,
-                "item_id": item_id,
-                "score": score,
-                "explanation": explanation,
-                "is_cold_start": result.is_cold_start
-            })
-            
-    if rows:
-        df = pd.DataFrame(rows)
-        df.to_csv(csv_path, index=False)
-        logger.info(f"CSV results saved to {csv_path}")
-        
-    # Save summary statistics
-    summary_path = project_root / "eval" / "task_b_summary.txt"
-    with open(summary_path, "w") as f:
-        f.write("TASK B EVALUATION SUMMARY\n")
-        f.write("="*40 + "\n\n")
-        f.write(f"Total Users Evaluated: {metrics.num_users}\n")
-        f.write(f"Cold Start Users: {metrics.num_cold_start}\n")
-        f.write(f"NDCG@10: {metrics.ndcg_at_10:.4f}\n")
-        f.write(f"Hit Rate@10: {metrics.hit_rate_at_10:.4f}\n")
-        f.write(f"NDCG@10 (Cold Start): {metrics.ndcg_cold_start:.4f}\n")
-        f.write(f"Hit Rate@10 (Cold Start): {metrics.hit_rate_cold_start:.4f}\n")
-        f.write(f"Avg Recommendations per User: {metrics.avg_recommendations_per_user:.2f}\n")
-        f.write(f"Avg Recommendation Score: {metrics.avg_score:.4f}\n")
-        
-    logger.info(f"Summary saved to {summary_path}")
+
+
+def extract_recommended_items(payload: dict[str, Any]) -> tuple[list[str], list[float], list[str], list[str]]:
+    """Extracts item IDs and associated metadata from the Task B response body."""
+    recommended_ids: list[str] = []
+    scores: list[float] = []
+    explanations: list[str] = []
+    thinking = [str(step) for step in payload.get("thinking", [])]
+
+    for recommendation in payload.get("recommendations", []):
+        item = recommendation.get("item") or {}
+        item_id = str(item.get("item_id") or recommendation.get("item_id") or "").strip()
+        if not item_id:
+            continue
+        recommended_ids.append(item_id)
+        scores.append(safe_float(recommendation.get("score"), 0.0))
+        explanations.append(str(recommendation.get("explanation") or ""))
+
+    return recommended_ids, scores, explanations, thinking
+
+
+def hit_rate_at_k(recommended: list[str], relevant: list[str], k: int = 10) -> float:
+    """Computes Hit Rate@K with normalized ID matching."""
+    recommended_set = {normalize_id(item_id) for item_id in recommended[:k]}
+    relevant_set = {normalize_id(item_id) for item_id in relevant}
+    return 1.0 if recommended_set & relevant_set else 0.0
+
+
+def ndcg_at_k(recommended: list[str], relevant: list[str], k: int = 10) -> float:
+    """Computes NDCG@K with normalized ID matching."""
+    relevant_set = {normalize_id(item_id) for item_id in relevant}
+    if not relevant_set:
+        return 0.0
+
+    dcg = 0.0
+    for index, item_id in enumerate(recommended[:k]):
+        if normalize_id(item_id) in relevant_set:
+            dcg += 1.0 / math.log2(index + 2)
+
+    ideal_hits = min(len(relevant_set), k)
+    idcg = sum(1.0 / math.log2(index + 2) for index in range(ideal_hits))
+    return dcg / idcg if idcg > 0 else 0.0
+
+
+def evaluate_user(base_url: str, user: TestUser) -> RecommendationResult | None:
+    """Calls Task B for one user and computes ranking metrics."""
+    response = request_with_retry(
+        "post",
+        f"{base_url}/recommend",
+        json=build_payload(user),
+        timeout=DEFAULT_TIMEOUT,
+    )
+
+    if not response.ok:
+        logger.error(
+            "Task B request failed for user %s with status %s: %s",
+            user.user_id,
+            response.status_code,
+            response.text[:500],
+        )
+        return None
+
+    try:
+        payload = response.json()
+    except ValueError:
+        logger.error("Task B returned non-JSON response for user %s", user.user_id)
+        return None
+
+    recommended_items, scores, explanations, thinking = extract_recommended_items(payload)
+    ndcg_score = ndcg_at_k(recommended_items, user.held_out_items, k=10)
+    hit_rate = hit_rate_at_k(recommended_items, user.held_out_items, k=10)
+
+    return RecommendationResult(
+        user_id=user.user_id,
+        platform=user.platform,
+        review_count=user.review_count,
+        held_out_items=user.held_out_items,
+        recommended_items=recommended_items,
+        scores=scores,
+        explanations=explanations,
+        thinking=thinking,
+        is_cold_start=user.is_cold_start,
+        ndcg_at_10=ndcg_score,
+        hit_rate_at_10=hit_rate,
+    )
+
+
+def average(values: list[float]) -> float:
+    """Returns the mean of a numeric list or 0.0 when empty."""
+    return sum(values) / len(values) if values else 0.0
+
+
+def compute_metrics(results: list[RecommendationResult]) -> EvaluationMetrics:
+    """Computes overall, warm, and cold-start metrics."""
+    warm_results = [result for result in results if not result.is_cold_start]
+    cold_results = [result for result in results if result.is_cold_start]
+
+    return EvaluationMetrics(
+        users_evaluated=len(results),
+        warm_users=len(warm_results),
+        cold_users=len(cold_results),
+        overall_ndcg_at_10=average([result.ndcg_at_10 for result in results]),
+        overall_hit_rate_at_10=average([result.hit_rate_at_10 for result in results]),
+        warm_ndcg_at_10=average([result.ndcg_at_10 for result in warm_results]),
+        warm_hit_rate_at_10=average([result.hit_rate_at_10 for result in warm_results]),
+        cold_ndcg_at_10=average([result.ndcg_at_10 for result in cold_results]),
+        cold_hit_rate_at_10=average([result.hit_rate_at_10 for result in cold_results]),
+    )
+
+
+def print_results_table(metrics: EvaluationMetrics) -> None:
+    """Prints the requested Task B summary table."""
+    print("\n" + "=" * 40)
+    print("TASK B EVALUATION RESULTS")
+    print("=" * 40)
+    print(
+        f"Users evaluated: {metrics.users_evaluated} "
+        f"({metrics.warm_users} warm, {metrics.cold_users} cold)"
+    )
+    print("")
+    print("Overall:")
+    print(f"  NDCG@10:      {metrics.overall_ndcg_at_10:.4f}")
+    print(f"  Hit Rate@10:  {metrics.overall_hit_rate_at_10:.4f}")
+    print("")
+    print(f"Warm Users (n={metrics.warm_users}):")
+    print(f"  NDCG@10:      {metrics.warm_ndcg_at_10:.4f}")
+    print(f"  Hit Rate@10:  {metrics.warm_hit_rate_at_10:.4f}")
+    print("")
+    print(f"Cold-Start Users (n={metrics.cold_users}):")
+    print(f"  NDCG@10:      {metrics.cold_ndcg_at_10:.4f}")
+    print(f"  Hit Rate@10:  {metrics.cold_hit_rate_at_10:.4f}")
+
+
+def save_results(results: list[RecommendationResult], metrics: EvaluationMetrics) -> None:
+    """Writes JSON results and a text summary for Task B."""
+    eval_dir = project_root() / "eval"
+    json_path = eval_dir / "eval_results_task_b.json"
+    summary_path = eval_dir / "task_b_summary.txt"
+
+    output_data = {
+        "evaluation_metrics": asdict(metrics),
+        "user_results": [asdict(result) for result in results],
+    }
+    with json_path.open("w", encoding="utf-8") as file:
+        json.dump(output_data, file, indent=2)
+
+    summary_lines = [
+        "TASK B EVALUATION RESULTS",
+        "=" * 40,
+        f"Users evaluated: {metrics.users_evaluated} ({metrics.warm_users} warm, {metrics.cold_users} cold)",
+        "",
+        "Overall:",
+        f"  NDCG@10:      {metrics.overall_ndcg_at_10:.4f}",
+        f"  Hit Rate@10:  {metrics.overall_hit_rate_at_10:.4f}",
+        "",
+        f"Warm Users (n={metrics.warm_users}):",
+        f"  NDCG@10:      {metrics.warm_ndcg_at_10:.4f}",
+        f"  Hit Rate@10:  {metrics.warm_hit_rate_at_10:.4f}",
+        "",
+        f"Cold-Start Users (n={metrics.cold_users}):",
+        f"  NDCG@10:      {metrics.cold_ndcg_at_10:.4f}",
+        f"  Hit Rate@10:  {metrics.cold_hit_rate_at_10:.4f}",
+    ]
+    with summary_path.open("w", encoding="utf-8") as file:
+        file.write("\n".join(summary_lines) + "\n")
+
+    logger.info("Results saved to %s and %s", json_path, summary_path)
+
+
+def main() -> None:
+    """Runs the full Task B evaluation flow."""
+    args = parse_args()
+    limit = max(1, args.limit)
+
+    check_connection(args.base_url)
+    users = choose_test_users(limit)
+    if not users:
+        logger.error("No real Task B users with held-out test items were loaded from ChromaDB.")
+        sys.exit(1)
+
+    logger.info("Loaded %s real Task B users from ChromaDB", len(users))
+    results: list[RecommendationResult] = []
+
+    for index, user in enumerate(users, start=1):
+        print(f"Evaluating user {index}/{len(users)}...")
+        result = evaluate_user(args.base_url, user)
+        if result is not None:
+            results.append(result)
+
+    if not results:
+        logger.error("Task B evaluation produced no successful results.")
+        sys.exit(1)
+
+    metrics = compute_metrics(results)
+    print_results_table(metrics)
+    save_results(results, metrics)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
