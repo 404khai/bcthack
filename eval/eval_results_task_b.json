@@ -24,14 +24,14 @@
         "city-favorite"
       ],
       "scores": [
-        9.62,
-        5.85,
-        5.49
+        9.0,
+        5.0,
+        4.0
       ],
       "explanations": [
-        "Starter match for wine bars is a relevant match because it sits in the wine bars category and carries metadata that overlaps with the current request for Wine Bars. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
-        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Wine Bars. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
-        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Wine Bars. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
+        "This 'Starter match for wine bars' is a direct and strong match for your current query context, which specifically requests 'Wine Bars'. Since you are looking for a wine bar, this item directly fulfills that explicit interest, making it highly relevant.",
+        "The 'Popular Local Discovery' is a general 'experience' recommendation based on local popularity. While it doesn't specifically match your current query for 'Wine Bars', it's offered as a fallback to suggest a generally well-liked local spot, even without specific user preferences.",
+        "The 'City Favorite Pick' is another general 'experience' recommendation, highlighting a popular choice within the city. Similar to other fallbacks, it doesn't align directly with your specific search for 'Wine Bars' but provides a broad, well-regarded option when no specific user preferences are available."
       ],
       "thinking": [
         "Think: interpret the query as 'recommend something based on my history' with target category 'Wine Bars'.",
@@ -62,14 +62,14 @@
         "city-favorite"
       ],
       "scores": [
-        9.62,
-        5.85,
-        5.49
+        9.0,
+        6.0,
+        5.0
       ],
       "explanations": [
-        "Starter match for hotels & travel is a relevant match because it sits in the hotels & travel category and carries metadata that overlaps with the current request for Hotels & Travel. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
-        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Hotels & Travel. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
-        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Hotels & Travel. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
+        "The \"Starter match for hotels & travel\" is an excellent fit because it directly corresponds to the user's current interest in the 'Hotels & Travel' category, as indicated by the query context. This item is explicitly identified as a strong preference for 'hotels & travel', making it highly relevant to the user's immediate search.",
+        "The \"Popular Local Discovery\" is a general 'experience' recommendation that could appeal to a broad audience, but it doesn't specifically align with the user's current interest in 'Hotels & Travel'. While it offers a popular local option, it serves more as a fallback rather than a direct match for the query's primary category.",
+        "The \"City Favorite Pick\" is another general 'experience' recommendation, offering a popular choice within a city. However, this item does not directly cater to the user's specific interest in the 'Hotels & Travel' category or the 'food' domain highlighted in the query context."
       ],
       "thinking": [
         "Think: interpret the query as 'recommend something based on my history' with target category 'Hotels & Travel'.",
@@ -99,14 +99,14 @@
         "city-favorite"
       ],
       "scores": [
-        9.62,
-        5.85,
-        5.49
+        10.0,
+        5.0,
+        4.0
       ],
       "explanations": [
-        "Starter match for bars is a relevant match because it sits in the bars category and carries metadata that overlaps with the current request for Bars. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
-        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Bars. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
-        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Bars. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
+        "The 'Starter match for bars' is an excellent fit because it directly aligns with your current query for 'Bars'. Given your profile doesn't specify particular preferences, this item is a perfect initial recommendation within the desired category.",
+        "The 'Popular Local Discovery' is a general 'experience' recommendation that could be appealing if you're looking for something popular beyond just bars. While not a specific bar, it offers a well-regarded local option when your specific preferences are not yet known.",
+        "The 'City Favorite Pick' is another general 'experience' recommendation, similar to the popular local discovery. It provides a broadly liked option for an 'experience' in the city, which can be a good fallback when specific bar preferences are not available in your profile."
       ],
       "thinking": [
         "Think: interpret the query as 'recommend something based on my history' with target category 'Bars'.",
@@ -138,14 +138,14 @@
         "city-favorite"
       ],
       "scores": [
-        9.62,
-        5.85,
-        5.49
+        9.0,
+        4.0,
+        3.0
       ],
       "explanations": [
-        "Starter match for pizza is a relevant match because it sits in the pizza category and carries metadata that overlaps with the current request for Pizza. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
-        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Pizza. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
-        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Pizza. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
+        "This 'Starter match for pizza' is highly recommended because it directly aligns with your query for 'Pizza'. As a pizza item, it's the most relevant choice given your current search intent, even without a detailed user history.",
+        "The 'Popular Local Discovery' is a general 'experience' recommendation based on popularity. While it might be a good general suggestion, it doesn't specifically match your current query for 'Pizza', making it less relevant in this context.",
+        "The 'City Favorite Pick' is another general 'experience' recommendation based on overall popularity. It's not directly related to your specific interest in 'Pizza' and serves more as a fallback option when more specific matches are not available."
       ],
       "thinking": [
         "Think: interpret the query as 'recommend something based on my history' with target category 'Pizza'.",
@@ -176,14 +176,14 @@
         "city-favorite"
       ],
       "scores": [
-        9.62,
-        5.85,
-        5.49
+        9.0,
+        6.0,
+        5.0
       ],
       "explanations": [
-        "Starter match for restaurants is a relevant match because it sits in the restaurants category and carries metadata that overlaps with the current request for Restaurants. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
-        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Restaurants. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
-        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Restaurants. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
+        "The 'Starter match for restaurants' is highly relevant because the query context specifically targets 'Restaurants'. This item directly aligns with the user's current search for restaurant options, making it a strong initial recommendation even without a detailed user profile.",
+        "The 'Popular Local Discovery' is a reasonable recommendation as a general 'experience' fallback, especially since the user has no specific preferences recorded. While not explicitly a 'restaurant', it could suggest popular local dining experiences, aligning with the broader 'food' domain of the query.",
+        "The 'City Favorite Pick' is another general 'experience' fallback that could be relevant when no specific user preferences are known. Although it's not categorized as a 'restaurant', city favorites often include popular dining spots, which could still fit within the 'food' target domain of the query."
       ],
       "thinking": [
         "Think: interpret the query as 'recommend something based on my history' with target category 'Restaurants'.",
@@ -214,14 +214,14 @@
         "city-favorite"
       ],
       "scores": [
-        9.62,
-        5.85,
-        5.49
+        9.0,
+        5.0,
+        4.0
       ],
       "explanations": [
-        "Starter match for women's clothing is a relevant match because it sits in the women's clothing category and carries metadata that overlaps with the current request for Women's Clothing. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
-        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Women's Clothing. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
-        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Women's Clothing. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
+        "This 'Starter match for women's clothing' is highly relevant as it directly aligns with the 'Women's Clothing' category specified in your current query context. Since your user profile does not yet contain detailed preferences or history, this item serves as an excellent initial recommendation that directly addresses your immediate interest.",
+        "As a 'Popular Local Discovery' in the 'experience' category, this item is a general recommendation based on popularity in your area. While not directly related to 'Women's Clothing' from your query, it offers a broad appeal as a fallback option when specific user preferences are not available.",
+        "The 'City Favorite Pick' is another general 'experience' recommendation, highlighting a popular choice within the city. This item serves as a useful fallback for discovery, providing a well-regarded option even without specific user preferences or a direct match to the 'Women's Clothing' query."
       ],
       "thinking": [
         "Think: interpret the query as 'recommend something based on my history' with target category 'Women's Clothing'.",
@@ -252,14 +252,14 @@
         "city-favorite"
       ],
       "scores": [
-        9.62,
-        5.85,
-        5.49
+        10.0,
+        2.0,
+        1.0
       ],
       "explanations": [
-        "Starter match for sandwiches is a relevant match because it sits in the sandwiches category and carries metadata that overlaps with the current request for Sandwiches. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
-        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Sandwiches. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
-        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Sandwiches. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
+        "This item, 'Starter match for sandwiches', is an excellent match because the user's current query explicitly specifies 'Sandwiches'. Its category directly aligns with the user's immediate interest in finding a sandwich-related food item.",
+        "The 'Popular Local Discovery' item, categorized as an 'experience', does not directly align with the user's specific search for 'Sandwiches'. While it might be a generally popular option, it falls outside the requested food category.",
+        "The 'City Favorite Pick' is an 'experience' category item, which is not relevant to the user's current query for 'Sandwiches'. This item is a general fallback and does not match the specific food preference indicated by the user."
       ],
       "thinking": [
         "Think: interpret the query as 'recommend something based on my history' with target category 'Sandwiches'.",
@@ -290,14 +290,14 @@
         "city-favorite"
       ],
       "scores": [
-        9.62,
-        5.85,
-        5.49
+        9.0,
+        7.0,
+        6.0
       ],
       "explanations": [
-        "Starter match for event planning & services is a relevant match because it sits in the event planning & services category and carries metadata that overlaps with the current request for Event Planning & Services. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
-        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Event Planning & Services. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
-        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Event Planning & Services. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
+        "This 'Starter match for event planning & services' is a highly relevant recommendation because it directly aligns with your current query for 'Event Planning & Services'. Given your search intent, this item specifically addresses your immediate need for services within this category, making it a strong fit.",
+        "The 'Popular Local Discovery' item, categorized as an 'experience', serves as a valuable general recommendation since your specific preferences are not yet known. This item offers a widely appreciated local experience, providing a safe and engaging option for general exploration when you might be open to various activities.",
+        "The 'City Favorite Pick', also an 'experience', is another excellent general recommendation based on its high popularity among other users. While not directly related to 'Event Planning & Services', it presents a well-regarded option for general discovery, offering a reliable choice for a user exploring various possibilities."
       ],
       "thinking": [
         "Think: interpret the query as 'recommend something based on my history' with target category 'Event Planning & Services'.",
@@ -327,14 +327,14 @@
         "city-favorite"
       ],
       "scores": [
-        9.62,
-        5.85,
-        5.49
+        9.0,
+        6.0,
+        5.0
       ],
       "explanations": [
-        "Starter match for arts & entertainment is a relevant match because it sits in the arts & entertainment category and carries metadata that overlaps with the current request for Arts & Entertainment. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
-        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Arts & Entertainment. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
-        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Arts & Entertainment. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
+        "The 'Starter match for arts & entertainment' is highly relevant as it directly aligns with your current query for 'Arts & Entertainment'. Although your profile doesn't show explicit preferences, this item's category perfectly matches the specific domain you are exploring right now.",
+        "The 'Popular Local Discovery' is a general 'experience' recommendation based on overall popularity. While it doesn't specifically match the 'Arts & Entertainment' category from your query, it offers a well-regarded option when specific preferences are not yet established in your profile.",
+        "The 'City Favorite Pick' is another popular 'experience' item that serves as a general fallback. Similar to other popular options, it provides a widely appreciated choice, even though it's not directly tailored to the 'Arts & Entertainment' category you specified in your current search."
       ],
       "thinking": [
         "Think: interpret the query as 'recommend something based on my history' with target category 'Arts & Entertainment'.",
@@ -364,14 +364,14 @@
         "city-favorite"
       ],
       "scores": [
-        9.62,
-        5.85,
-        5.49
+        10.0,
+        3.0,
+        2.0
       ],
       "explanations": [
-        "Starter match for cheesesteaks is a relevant match because it sits in the cheesesteaks category and carries metadata that overlaps with the current request for Cheesesteaks. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
-        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Cheesesteaks. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
-        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Cheesesteaks. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
+        "This 'Starter match for cheesesteaks' is a perfect fit as it directly aligns with your current search for 'Cheesesteaks'. Since you are actively looking for items in the cheesesteaks category, this recommendation directly addresses your immediate interest.",
+        "While 'Popular Local Discovery' is a general 'experience' recommendation based on popularity, it doesn't specifically match your current query for 'Cheesesteaks'. Given that your profile doesn't have specific preferences, this is a general suggestion for a popular local experience, but not tailored to your food search.",
+        "The 'City Favorite Pick' is another general 'experience' recommendation, similar to other popular fallbacks. It does not directly relate to your specific search for 'Cheesesteaks', offering a general popular choice rather than a targeted food item."
       ],
       "thinking": [
         "Think: interpret the query as 'recommend something based on my history' with target category 'Cheesesteaks'.",
@@ -401,14 +401,14 @@
         "city-favorite"
       ],
       "scores": [
-        9.62,
-        5.85,
-        5.49
+        10.0,
+        3.0,
+        2.0
       ],
       "explanations": [
-        "Starter match for pizza is a relevant match because it sits in the pizza category and carries metadata that overlaps with the current request for Pizza. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
-        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Pizza. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
-        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Pizza. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
+        "This 'Starter match for pizza' is a perfect fit because the query context explicitly requests recommendations in the 'Pizza' category. Its source indicates it's an explicit preference match for pizza, directly aligning with the user's current search intent.",
+        "While a 'Popular Local Discovery' could be interesting, this item is categorized as an 'experience' and does not directly match the user's specific query for 'Pizza'. Given the lack of user history or preferences, it's a generic fallback that doesn't align with the current food-related search.",
+        "This 'City Favorite Pick' is a general 'experience' recommendation and does not align with the user's explicit query for 'Pizza'. Without any specific user preferences or history, this fallback option is less relevant than a direct category match for food."
       ],
       "thinking": [
         "Think: interpret the query as 'recommend something based on my history' with target category 'Pizza'.",
@@ -438,14 +438,14 @@
         "city-favorite"
       ],
       "scores": [
-        9.62,
-        5.85,
-        5.49
+        10.0,
+        6.0,
+        5.0
       ],
       "explanations": [
-        "Starter match for burgers is a relevant match because it sits in the burgers category and carries metadata that overlaps with the current request for Burgers. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
-        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Burgers. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
-        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Burgers. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
+        "This 'Starter match for burgers' is a perfect fit as it directly aligns with your explicit query for 'Burgers'. Its category is 'burgers', ensuring it meets your immediate food preference.",
+        "The 'Popular Local Discovery' is a general 'experience' recommendation, suggesting something well-liked in the area. While not specific to 'Burgers', it offers a popular local option if you're open to exploring beyond your initial food search.",
+        "This 'City Favorite Pick' is another general 'experience' recommendation, highlighting a highly-rated local attraction or activity. Although it doesn't match your 'Burgers' query, it's a popular choice that could be interesting for a broader discovery on the Yelp platform."
       ],
       "thinking": [
         "Think: interpret the query as 'recommend something based on my history' with target category 'Burgers'.",
@@ -477,14 +477,14 @@
         "city-favorite"
       ],
       "scores": [
-        9.62,
-        5.85,
-        5.49
+        10.0,
+        5.0,
+        4.0
       ],
       "explanations": [
-        "Starter match for american (traditional) is a relevant match because it sits in the american (traditional) category and carries metadata that overlaps with the current request for American (Traditional). It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
-        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for American (Traditional). It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
-        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for American (Traditional). It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
+        "This 'Starter match for american (traditional)' is a direct and strong match for your current query context, which specifically requests 'American (Traditional)' cuisine. Since you're looking for this particular food category, this item is highly relevant as an initial suggestion.",
+        "While not directly matching your 'American (Traditional)' food query, the 'Popular Local Discovery' is a general 'experience' recommendation based on overall popularity. This could be a good option if you're open to exploring well-regarded local spots beyond just food, especially since your profile doesn't indicate other strong preferences.",
+        "The 'City Favorite Pick' is another general 'experience' recommendation, similar to the popular local discovery, that might appeal to a user without explicit preferences. Although it doesn't align with your specific 'American (Traditional)' food query, it offers a widely appreciated local option."
       ],
       "thinking": [
         "Think: interpret the query as 'recommend something based on my history' with target category 'American (Traditional)'.",
@@ -519,14 +519,14 @@
         "city-favorite"
       ],
       "scores": [
-        9.62,
-        5.85,
-        5.49
+        9.0,
+        5.0,
+        4.0
       ],
       "explanations": [
-        "Starter match for restaurants is a relevant match because it sits in the restaurants category and carries metadata that overlaps with the current request for Restaurants. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
-        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Restaurants. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
-        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Restaurants. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
+        "This 'Starter match for restaurants' is a perfect fit for the current query, which explicitly targets the 'Restaurants' category. Despite the user having an empty profile, this item directly addresses the immediate need for restaurant recommendations, making it highly relevant.",
+        "The 'Popular Local Discovery' is a general 'experience' recommendation that could be interesting for a user with an empty profile. However, it doesn't specifically align with the query's explicit request for 'Restaurants', making it a less direct match than a restaurant-specific item.",
+        "This 'City Favorite Pick' is another general 'experience' recommendation, similar to the popular local discovery. While it's a general fallback, it does not directly match the query context's specific interest in 'Restaurants', making it less targeted for the user's current search."
       ],
       "thinking": [
         "Think: interpret the query as 'recommend something based on my history' with target category 'Restaurants'.",
@@ -557,14 +557,14 @@
         "city-favorite"
       ],
       "scores": [
-        9.62,
-        5.85,
-        5.49
+        9.0,
+        4.0,
+        3.0
       ],
       "explanations": [
-        "Starter match for mexican is a relevant match because it sits in the mexican category and carries metadata that overlaps with the current request for Mexican. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
-        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Mexican. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
-        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Mexican. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
+        "This 'Starter match for mexican' is a strong recommendation because the user's query explicitly specified the 'Mexican' food category. It directly aligns with the user's immediate interest in Mexican cuisine, making it highly relevant for their current search.",
+        "The 'Popular Local Discovery' is a general 'experience' recommendation that serves as a fallback given the user's sparse profile. While it doesn't specifically match the 'Mexican' food category from the query, it offers a generally well-liked local option that might appeal to a user without defined preferences.",
+        "The 'City Favorite Pick' is another general 'experience' recommendation, similar to the popular local discovery, acting as a fallback for an unknown user profile. It provides a broadly appealing option, though it doesn't directly address the specific 'Mexican' food category requested in the query context."
       ],
       "thinking": [
         "Think: interpret the query as 'recommend something based on my history' with target category 'Mexican'.",

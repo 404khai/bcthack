@@ -14,7 +14,7 @@
 ../blueprint/
 
 # ChromaDB data
-../chroma_data/
+../chroma_db/
 
 # Python cache
 __pycache__/

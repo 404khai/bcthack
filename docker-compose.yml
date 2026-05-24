@@ -4,12 +4,12 @@ services:
     container_name: bcthack_chromadb
     environment:
       - IS_PERSISTENT=TRUE
-      - PERSIST_DIRECTORY=/chroma_data
+      - PERSIST_DIRECTORY=/chroma_db
       - ANONYMIZED_TELEMETRY=FALSE
     ports:
       - "8000:8000"
     volumes:
-      - ./chroma_data:/chroma_data
+      - ./chroma_db:/chroma_db
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
       interval: 30s
@@ -31,7 +31,7 @@ services:
       PYTHONPATH: /app
       CHROMA_HOST: chromadb
       CHROMA_PORT: 8000
-      CHROMA_PERSIST_DIR: /app/chroma_data
+      CHROMA_PERSIST_DIR: /app/chroma_db
       DATA_DIR: /app/data
       SERVICE_PORT: 8001
       GEMINI_API_KEY: ${GEMINI_API_KEY}
@@ -43,7 +43,7 @@ services:
       - ./shared:/app/shared
       - ./task_a:/app/task_a
       - ./data:/app/data
-      - ./chroma_data:/app/chroma_data
+      - ./chroma_db:/app/chroma_db
     depends_on:
       chromadb:
         condition: service_healthy
@@ -68,7 +68,7 @@ services:
       PYTHONPATH: /app
       CHROMA_HOST: chromadb
       CHROMA_PORT: 8000
-      CHROMA_PERSIST_DIR: /app/chroma_data
+      CHROMA_PERSIST_DIR: /app/chroma_db
       DATA_DIR: /app/data
       SERVICE_PORT: 8002
       GEMINI_API_KEY: ${GEMINI_API_KEY}
@@ -80,7 +80,7 @@ services:
       - ./shared:/app/shared
       - ./task_b:/app/task_b
       - ./data:/app/data
-      - ./chroma_data:/app/chroma_data
+      - ./chroma_db:/app/chroma_db
     depends_on:
       chromadb:
         condition: service_healthy

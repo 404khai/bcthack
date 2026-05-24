@@ -103,8 +103,6 @@ data/*.json
 !data/sample/
 !data/sample/test_fixtures/
 
-# ChromaDB data
-chroma_data/
 # OS files
 .DS_Store
 Thumbs.db
@@ -125,9 +123,6 @@ blueprint/
 # Data directories (except sample test fixtures)
 data/
 !data/sample/test_fixtures/
-
-# ChromaDB data
-chroma_data/
 
 # Evaluation results
 eval/eval_results_*.json

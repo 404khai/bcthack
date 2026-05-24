@@ -35,6 +35,7 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
 ENV PATH="/opt/venv/bin:$PATH"
+ENV CHROMA_PERSIST_DIR=/app/chroma_db
 
 # Create non-root user
 RUN groupadd -r appuser && useradd -r -g appuser appuser
@@ -47,6 +48,7 @@ COPY --from=builder /opt/venv /opt/venv
 # Copy application code
 COPY shared/ /app/shared/
 COPY task_a/ /app/task_a/
+COPY chroma_db/ /app/chroma_db/
 
 # Set ownership to non-root user
 RUN chown -R appuser:appuser /app
