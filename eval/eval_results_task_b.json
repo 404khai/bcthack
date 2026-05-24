@@ -25,24 +25,24 @@
       ],
       "scores": [
         9.0,
-        5.0,
-        4.0
+        4.0,
+        3.0
       ],
       "explanations": [
-        "This 'Starter match for wine bars' is a direct and strong match for your current query context, which specifically requests 'Wine Bars'. Since you are looking for a wine bar, this item directly fulfills that explicit interest, making it highly relevant.",
-        "The 'Popular Local Discovery' is a general 'experience' recommendation based on local popularity. While it doesn't specifically match your current query for 'Wine Bars', it's offered as a fallback to suggest a generally well-liked local spot, even without specific user preferences.",
-        "The 'City Favorite Pick' is another general 'experience' recommendation, highlighting a popular choice within the city. Similar to other fallbacks, it doesn't align directly with your specific search for 'Wine Bars' but provides a broad, well-regarded option when no specific user preferences are available."
+        "This 'Starter match for wine bars' is a perfect fit because its category directly aligns with the user's explicit query for 'Wine Bars'. Despite having no prior preferences, this item directly addresses the immediate request, making it highly relevant for the user.",
+        "While 'Popular Local Discovery' might offer a general 'experience', it does not specifically match the user's explicit query for 'Wine Bars'. Given the lack of a user profile, this item serves as a generic fallback rather than a targeted recommendation for the requested category.",
+        "The 'City Favorite Pick' is a general 'experience' recommendation that doesn't directly correspond to the user's specific interest in 'Wine Bars'. With no user history or preferences to draw from, this item is a broad suggestion and not tailored to the current query."
       ],
       "thinking": [
-        "Think: interpret the query as 'recommend something based on my history' with target category 'Wine Bars'.",
-        "Think: user has 0 stored interactions, treated as cold start.",
+        "Think: interpret the query as 'Recommend Wine Bars based on my history' with target category 'Wine Bars'.",
+        "Think: user has 3 stored interactions, treated as warm.",
         "Plan: explicit persona preferences are not provided and conversation refinements are none yet.",
         "Plan: constraints considered before retrieval are ['none'] and attributes not provided.",
-        "Plan: top categories from history are ['unknown'].",
+        "Plan: top categories from history are ['Wine Bars', 'American (New)', 'Bars'].",
         "Think: retrieved 0 real candidates from ChromaDB.",
         "Think: top candidate is none.",
         "Think: supplemented with 3 cold-start candidates because real retrieval was sparse.",
-        "Plan: try live Chroma retrieval first, then use cold-start defaults only if real candidates are sparse."
+        "Plan: use Chroma user-history retrieval first, then semantic item retrieval to diversify candidates."
       ],
       "is_cold_start": false,
       "ndcg_at_10": 0.0,
@@ -63,24 +63,24 @@
       ],
       "scores": [
         9.0,
-        6.0,
-        5.0
+        7.0,
+        6.0
       ],
       "explanations": [
-        "The \"Starter match for hotels & travel\" is an excellent fit because it directly corresponds to the user's current interest in the 'Hotels & Travel' category, as indicated by the query context. This item is explicitly identified as a strong preference for 'hotels & travel', making it highly relevant to the user's immediate search.",
-        "The \"Popular Local Discovery\" is a general 'experience' recommendation that could appeal to a broad audience, but it doesn't specifically align with the user's current interest in 'Hotels & Travel'. While it offers a popular local option, it serves more as a fallback rather than a direct match for the query's primary category.",
-        "The \"City Favorite Pick\" is another general 'experience' recommendation, offering a popular choice within a city. However, this item does not directly cater to the user's specific interest in the 'Hotels & Travel' category or the 'food' domain highlighted in the query context."
+        "The 'Starter match for hotels & travel' is an excellent fit because its category, 'hotels & travel', directly aligns with the primary category specified in your query context. This recommendation is a strong initial match for someone looking into 'Hotels & Travel' options.",
+        "The 'Popular Local Discovery' is a relevant 'experience' recommendation that could complement your 'Hotels & Travel' query, potentially including local food experiences within a travel itinerary. As a popular local pick, it offers a general appeal when specific user preferences are not available.",
+        "The 'City Favorite Pick' is another 'experience' recommendation that could be considered alongside your 'Hotels & Travel' search, offering general popular activities or dining options. While not explicitly food-focused, 'experience' items often encompass local culinary highlights, which aligns with the 'food' target domain."
       ],
       "thinking": [
-        "Think: interpret the query as 'recommend something based on my history' with target category 'Hotels & Travel'.",
-        "Think: user has 0 stored interactions, treated as cold start.",
+        "Think: interpret the query as 'Recommend Hotels & Travel based on my history' with target category 'Hotels & Travel'.",
+        "Think: user has 4 stored interactions, treated as warm.",
         "Plan: explicit persona preferences are not provided and conversation refinements are none yet.",
         "Plan: constraints considered before retrieval are ['none'] and attributes not provided.",
-        "Plan: top categories from history are ['unknown'].",
+        "Plan: top categories from history are ['Hotels & Travel', 'Food', 'American (New)'].",
         "Think: retrieved 0 real candidates from ChromaDB.",
         "Think: top candidate is none.",
         "Think: supplemented with 3 cold-start candidates because real retrieval was sparse.",
-        "Plan: try live Chroma retrieval first, then use cold-start defaults only if real candidates are sparse."
+        "Plan: use Chroma user-history retrieval first, then semantic item retrieval to diversify candidates."
       ],
       "is_cold_start": false,
       "ndcg_at_10": 0.0,
@@ -99,25 +99,25 @@
         "city-favorite"
       ],
       "scores": [
-        10.0,
-        5.0,
-        4.0
+        9.0,
+        6.0,
+        5.0
       ],
       "explanations": [
-        "The 'Starter match for bars' is an excellent fit because it directly aligns with your current query for 'Bars'. Given your profile doesn't specify particular preferences, this item is a perfect initial recommendation within the desired category.",
-        "The 'Popular Local Discovery' is a general 'experience' recommendation that could be appealing if you're looking for something popular beyond just bars. While not a specific bar, it offers a well-regarded local option when your specific preferences are not yet known.",
-        "The 'City Favorite Pick' is another general 'experience' recommendation, similar to the popular local discovery. It provides a broadly liked option for an 'experience' in the city, which can be a good fallback when specific bar preferences are not available in your profile."
+        "This 'Starter match for bars' is an excellent fit because the user's query explicitly requested 'Bars', and this item directly matches that category. It is identified as a strong preference match for 'bars', making it highly relevant to the current search.",
+        "The 'Popular Local Discovery' is a good general recommendation, categorized as an 'experience', which could appeal to a user exploring the 'food' domain. While not specifically a bar, its popularity suggests it's a well-regarded local option for someone without defined preferences, offering a broader appeal.",
+        "The 'City Favorite Pick' is another general 'experience' recommendation that could be suitable for a user with an empty profile looking for something popular in the 'food' domain. As a city favorite, it represents a widely appreciated option, even if it doesn't directly match the 'Bars' category from the query."
       ],
       "thinking": [
-        "Think: interpret the query as 'recommend something based on my history' with target category 'Bars'.",
-        "Think: user has 0 stored interactions, treated as cold start.",
+        "Think: interpret the query as 'Recommend Bars based on my history' with target category 'Bars'.",
+        "Think: user has 4 stored interactions, treated as warm.",
         "Plan: explicit persona preferences are not provided and conversation refinements are none yet.",
         "Plan: constraints considered before retrieval are ['none'] and attributes not provided.",
-        "Plan: top categories from history are ['unknown'].",
+        "Plan: top categories from history are ['Bars', 'Bikes', 'Sandwiches'].",
         "Think: retrieved 0 real candidates from ChromaDB.",
         "Think: top candidate is none.",
         "Think: supplemented with 3 cold-start candidates because real retrieval was sparse.",
-        "Plan: try live Chroma retrieval first, then use cold-start defaults only if real candidates are sparse."
+        "Plan: use Chroma user-history retrieval first, then semantic item retrieval to diversify candidates."
       ],
       "is_cold_start": false,
       "ndcg_at_10": 0.0,
@@ -138,25 +138,25 @@
         "city-favorite"
       ],
       "scores": [
-        9.0,
-        4.0,
-        3.0
+        10.0,
+        3.0,
+        2.0
       ],
       "explanations": [
-        "This 'Starter match for pizza' is highly recommended because it directly aligns with your query for 'Pizza'. As a pizza item, it's the most relevant choice given your current search intent, even without a detailed user history.",
-        "The 'Popular Local Discovery' is a general 'experience' recommendation based on popularity. While it might be a good general suggestion, it doesn't specifically match your current query for 'Pizza', making it less relevant in this context.",
-        "The 'City Favorite Pick' is another general 'experience' recommendation based on overall popularity. It's not directly related to your specific interest in 'Pizza' and serves more as a fallback option when more specific matches are not available."
+        "This 'Starter match for pizza' item is a perfect fit because the user's query explicitly specifies 'Pizza' as the desired category. It directly addresses the user's immediate need, making it the most relevant recommendation despite the lack of a detailed user profile.",
+        "The 'Popular Local Discovery' is a generic 'experience' recommendation based on popularity. While it might be a good fallback in other scenarios, it doesn't align with the user's specific query for 'Pizza' and there are no user preferences to suggest an interest in general local experiences at this moment.",
+        "This 'City Favorite Pick' is another general 'experience' recommendation, likely based on overall popularity. It does not match the user's explicit request for 'Pizza' and, without any other user preferences, it's less relevant than a direct category match."
       ],
       "thinking": [
-        "Think: interpret the query as 'recommend something based on my history' with target category 'Pizza'.",
-        "Think: user has 0 stored interactions, treated as cold start.",
+        "Think: interpret the query as 'Recommend Pizza based on my history' with target category 'Pizza'.",
+        "Think: user has 8 stored interactions, treated as warm.",
         "Plan: explicit persona preferences are not provided and conversation refinements are none yet.",
         "Plan: constraints considered before retrieval are ['none'] and attributes not provided.",
-        "Plan: top categories from history are ['unknown'].",
+        "Plan: top categories from history are ['Pizza', 'Food', 'Malaysian'].",
         "Think: retrieved 0 real candidates from ChromaDB.",
         "Think: top candidate is none.",
         "Think: supplemented with 3 cold-start candidates because real retrieval was sparse.",
-        "Plan: try live Chroma retrieval first, then use cold-start defaults only if real candidates are sparse."
+        "Plan: use Chroma user-history retrieval first, then semantic item retrieval to diversify candidates."
       ],
       "is_cold_start": false,
       "ndcg_at_10": 0.0,
@@ -176,25 +176,25 @@
         "city-favorite"
       ],
       "scores": [
-        9.0,
-        6.0,
-        5.0
+        9.62,
+        5.85,
+        5.49
       ],
       "explanations": [
-        "The 'Starter match for restaurants' is highly relevant because the query context specifically targets 'Restaurants'. This item directly aligns with the user's current search for restaurant options, making it a strong initial recommendation even without a detailed user profile.",
-        "The 'Popular Local Discovery' is a reasonable recommendation as a general 'experience' fallback, especially since the user has no specific preferences recorded. While not explicitly a 'restaurant', it could suggest popular local dining experiences, aligning with the broader 'food' domain of the query.",
-        "The 'City Favorite Pick' is another general 'experience' fallback that could be relevant when no specific user preferences are known. Although it's not categorized as a 'restaurant', city favorites often include popular dining spots, which could still fit within the 'food' target domain of the query."
+        "Starter match for restaurants is a relevant match because it sits in the restaurants category and carries metadata that overlaps with the current request for Restaurants. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Restaurants. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Restaurants. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
       ],
       "thinking": [
-        "Think: interpret the query as 'recommend something based on my history' with target category 'Restaurants'.",
-        "Think: user has 0 stored interactions, treated as cold start.",
+        "Think: interpret the query as 'Recommend Restaurants based on my history' with target category 'Restaurants'.",
+        "Think: user has 4 stored interactions, treated as warm.",
         "Plan: explicit persona preferences are not provided and conversation refinements are none yet.",
         "Plan: constraints considered before retrieval are ['none'] and attributes not provided.",
-        "Plan: top categories from history are ['unknown'].",
+        "Plan: top categories from history are ['Restaurants', 'Dentists', 'Southern'].",
         "Think: retrieved 0 real candidates from ChromaDB.",
         "Think: top candidate is none.",
         "Think: supplemented with 3 cold-start candidates because real retrieval was sparse.",
-        "Plan: try live Chroma retrieval first, then use cold-start defaults only if real candidates are sparse."
+        "Plan: use Chroma user-history retrieval first, then semantic item retrieval to diversify candidates."
       ],
       "is_cold_start": false,
       "ndcg_at_10": 0.0,
@@ -214,25 +214,25 @@
         "city-favorite"
       ],
       "scores": [
-        9.0,
-        5.0,
-        4.0
+        9.62,
+        5.85,
+        5.49
       ],
       "explanations": [
-        "This 'Starter match for women's clothing' is highly relevant as it directly aligns with the 'Women's Clothing' category specified in your current query context. Since your user profile does not yet contain detailed preferences or history, this item serves as an excellent initial recommendation that directly addresses your immediate interest.",
-        "As a 'Popular Local Discovery' in the 'experience' category, this item is a general recommendation based on popularity in your area. While not directly related to 'Women's Clothing' from your query, it offers a broad appeal as a fallback option when specific user preferences are not available.",
-        "The 'City Favorite Pick' is another general 'experience' recommendation, highlighting a popular choice within the city. This item serves as a useful fallback for discovery, providing a well-regarded option even without specific user preferences or a direct match to the 'Women's Clothing' query."
+        "Starter match for women's clothing is a relevant match because it sits in the women's clothing category and carries metadata that overlaps with the current request for Women's Clothing. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Women's Clothing. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Women's Clothing. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
       ],
       "thinking": [
-        "Think: interpret the query as 'recommend something based on my history' with target category 'Women's Clothing'.",
-        "Think: user has 0 stored interactions, treated as cold start.",
+        "Think: interpret the query as 'Recommend Women's Clothing based on my history' with target category 'Women's Clothing'.",
+        "Think: user has 4 stored interactions, treated as warm.",
         "Plan: explicit persona preferences are not provided and conversation refinements are none yet.",
         "Plan: constraints considered before retrieval are ['none'] and attributes not provided.",
-        "Plan: top categories from history are ['unknown'].",
+        "Plan: top categories from history are [\"Women's Clothing\", 'American (Traditional)', 'Breweries'].",
         "Think: retrieved 0 real candidates from ChromaDB.",
         "Think: top candidate is none.",
         "Think: supplemented with 3 cold-start candidates because real retrieval was sparse.",
-        "Plan: try live Chroma retrieval first, then use cold-start defaults only if real candidates are sparse."
+        "Plan: use Chroma user-history retrieval first, then semantic item retrieval to diversify candidates."
       ],
       "is_cold_start": false,
       "ndcg_at_10": 0.0,
@@ -252,25 +252,25 @@
         "city-favorite"
       ],
       "scores": [
-        10.0,
-        2.0,
-        1.0
+        9.62,
+        5.85,
+        5.49
       ],
       "explanations": [
-        "This item, 'Starter match for sandwiches', is an excellent match because the user's current query explicitly specifies 'Sandwiches'. Its category directly aligns with the user's immediate interest in finding a sandwich-related food item.",
-        "The 'Popular Local Discovery' item, categorized as an 'experience', does not directly align with the user's specific search for 'Sandwiches'. While it might be a generally popular option, it falls outside the requested food category.",
-        "The 'City Favorite Pick' is an 'experience' category item, which is not relevant to the user's current query for 'Sandwiches'. This item is a general fallback and does not match the specific food preference indicated by the user."
+        "Starter match for sandwiches is a relevant match because it sits in the sandwiches category and carries metadata that overlaps with the current request for Sandwiches. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Sandwiches. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Sandwiches. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
       ],
       "thinking": [
-        "Think: interpret the query as 'recommend something based on my history' with target category 'Sandwiches'.",
-        "Think: user has 0 stored interactions, treated as cold start.",
+        "Think: interpret the query as 'Recommend Sandwiches based on my history' with target category 'Sandwiches'.",
+        "Think: user has 6 stored interactions, treated as warm.",
         "Plan: explicit persona preferences are not provided and conversation refinements are none yet.",
         "Plan: constraints considered before retrieval are ['none'] and attributes not provided.",
-        "Plan: top categories from history are ['unknown'].",
+        "Plan: top categories from history are ['Sandwiches', 'Restaurants', 'Grocery'].",
         "Think: retrieved 0 real candidates from ChromaDB.",
         "Think: top candidate is none.",
         "Think: supplemented with 3 cold-start candidates because real retrieval was sparse.",
-        "Plan: try live Chroma retrieval first, then use cold-start defaults only if real candidates are sparse."
+        "Plan: use Chroma user-history retrieval first, then semantic item retrieval to diversify candidates."
       ],
       "is_cold_start": false,
       "ndcg_at_10": 0.0,
@@ -290,25 +290,25 @@
         "city-favorite"
       ],
       "scores": [
-        9.0,
-        7.0,
-        6.0
+        9.62,
+        5.85,
+        5.49
       ],
       "explanations": [
-        "This 'Starter match for event planning & services' is a highly relevant recommendation because it directly aligns with your current query for 'Event Planning & Services'. Given your search intent, this item specifically addresses your immediate need for services within this category, making it a strong fit.",
-        "The 'Popular Local Discovery' item, categorized as an 'experience', serves as a valuable general recommendation since your specific preferences are not yet known. This item offers a widely appreciated local experience, providing a safe and engaging option for general exploration when you might be open to various activities.",
-        "The 'City Favorite Pick', also an 'experience', is another excellent general recommendation based on its high popularity among other users. While not directly related to 'Event Planning & Services', it presents a well-regarded option for general discovery, offering a reliable choice for a user exploring various possibilities."
+        "Starter match for event planning & services is a relevant match because it sits in the event planning & services category and carries metadata that overlaps with the current request for Event Planning & Services. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Event Planning & Services. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Event Planning & Services. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
       ],
       "thinking": [
-        "Think: interpret the query as 'recommend something based on my history' with target category 'Event Planning & Services'.",
-        "Think: user has 0 stored interactions, treated as cold start.",
+        "Think: interpret the query as 'Recommend Event Planning & Services based on my history' with target category 'Event Planning & Services'.",
+        "Think: user has 5 stored interactions, treated as warm.",
         "Plan: explicit persona preferences are not provided and conversation refinements are none yet.",
         "Plan: constraints considered before retrieval are ['none'] and attributes not provided.",
-        "Plan: top categories from history are ['unknown'].",
+        "Plan: top categories from history are ['Event Planning & Services', 'Pets', 'Chinese'].",
         "Think: retrieved 0 real candidates from ChromaDB.",
         "Think: top candidate is none.",
         "Think: supplemented with 3 cold-start candidates because real retrieval was sparse.",
-        "Plan: try live Chroma retrieval first, then use cold-start defaults only if real candidates are sparse."
+        "Plan: use Chroma user-history retrieval first, then semantic item retrieval to diversify candidates."
       ],
       "is_cold_start": false,
       "ndcg_at_10": 0.0,
@@ -327,25 +327,25 @@
         "city-favorite"
       ],
       "scores": [
-        9.0,
-        6.0,
-        5.0
+        9.62,
+        5.85,
+        5.49
       ],
       "explanations": [
-        "The 'Starter match for arts & entertainment' is highly relevant as it directly aligns with your current query for 'Arts & Entertainment'. Although your profile doesn't show explicit preferences, this item's category perfectly matches the specific domain you are exploring right now.",
-        "The 'Popular Local Discovery' is a general 'experience' recommendation based on overall popularity. While it doesn't specifically match the 'Arts & Entertainment' category from your query, it offers a well-regarded option when specific preferences are not yet established in your profile.",
-        "The 'City Favorite Pick' is another popular 'experience' item that serves as a general fallback. Similar to other popular options, it provides a widely appreciated choice, even though it's not directly tailored to the 'Arts & Entertainment' category you specified in your current search."
+        "Starter match for arts & entertainment is a relevant match because it sits in the arts & entertainment category and carries metadata that overlaps with the current request for Arts & Entertainment. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Arts & Entertainment. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Arts & Entertainment. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
       ],
       "thinking": [
-        "Think: interpret the query as 'recommend something based on my history' with target category 'Arts & Entertainment'.",
-        "Think: user has 0 stored interactions, treated as cold start.",
+        "Think: interpret the query as 'Recommend Arts & Entertainment based on my history' with target category 'Arts & Entertainment'.",
+        "Think: user has 3 stored interactions, treated as warm.",
         "Plan: explicit persona preferences are not provided and conversation refinements are none yet.",
         "Plan: constraints considered before retrieval are ['none'] and attributes not provided.",
-        "Plan: top categories from history are ['unknown'].",
+        "Plan: top categories from history are ['Arts & Entertainment', 'Restaurants', 'Beer'].",
         "Think: retrieved 0 real candidates from ChromaDB.",
         "Think: top candidate is none.",
         "Think: supplemented with 3 cold-start candidates because real retrieval was sparse.",
-        "Plan: try live Chroma retrieval first, then use cold-start defaults only if real candidates are sparse."
+        "Plan: use Chroma user-history retrieval first, then semantic item retrieval to diversify candidates."
       ],
       "is_cold_start": false,
       "ndcg_at_10": 0.0,
@@ -365,24 +365,24 @@
       ],
       "scores": [
         10.0,
-        3.0,
-        2.0
+        4.0,
+        3.0
       ],
       "explanations": [
-        "This 'Starter match for cheesesteaks' is a perfect fit as it directly aligns with your current search for 'Cheesesteaks'. Since you are actively looking for items in the cheesesteaks category, this recommendation directly addresses your immediate interest.",
-        "While 'Popular Local Discovery' is a general 'experience' recommendation based on popularity, it doesn't specifically match your current query for 'Cheesesteaks'. Given that your profile doesn't have specific preferences, this is a general suggestion for a popular local experience, but not tailored to your food search.",
-        "The 'City Favorite Pick' is another general 'experience' recommendation, similar to other popular fallbacks. It does not directly relate to your specific search for 'Cheesesteaks', offering a general popular choice rather than a targeted food item."
+        "This 'Starter match for cheesesteaks' is an excellent recommendation as it directly aligns with your current search for 'Cheesesteaks'. Given your explicit query, this item perfectly matches your immediate interest in finding a cheesesteak option. It's the most relevant choice for your specific food craving.",
+        "While your primary interest is 'Cheesesteaks', this 'Popular Local Discovery' is a general 'experience' recommendation based on overall popularity. It could offer a broader suggestion for things to do in the area, but it doesn't directly cater to your specific food search for cheesesteaks.",
+        "Similar to other general recommendations, this 'City Favorite Pick' is an 'experience' item based on its general popularity. Although it might be a well-regarded local spot, it does not directly address your current specific request for 'Cheesesteaks' and is less relevant to your food-related query."
       ],
       "thinking": [
-        "Think: interpret the query as 'recommend something based on my history' with target category 'Cheesesteaks'.",
-        "Think: user has 0 stored interactions, treated as cold start.",
+        "Think: interpret the query as 'Recommend Cheesesteaks based on my history' with target category 'Cheesesteaks'.",
+        "Think: user has 3 stored interactions, treated as warm.",
         "Plan: explicit persona preferences are not provided and conversation refinements are none yet.",
         "Plan: constraints considered before retrieval are ['none'] and attributes not provided.",
-        "Plan: top categories from history are ['unknown'].",
+        "Plan: top categories from history are ['Cheesesteaks', 'Nightlife', 'Restaurants'].",
         "Think: retrieved 0 real candidates from ChromaDB.",
         "Think: top candidate is none.",
         "Think: supplemented with 3 cold-start candidates because real retrieval was sparse.",
-        "Plan: try live Chroma retrieval first, then use cold-start defaults only if real candidates are sparse."
+        "Plan: use Chroma user-history retrieval first, then semantic item retrieval to diversify candidates."
       ],
       "is_cold_start": false,
       "ndcg_at_10": 0.0,
@@ -401,25 +401,25 @@
         "city-favorite"
       ],
       "scores": [
-        10.0,
-        3.0,
-        2.0
+        9.62,
+        5.85,
+        5.49
       ],
       "explanations": [
-        "This 'Starter match for pizza' is a perfect fit because the query context explicitly requests recommendations in the 'Pizza' category. Its source indicates it's an explicit preference match for pizza, directly aligning with the user's current search intent.",
-        "While a 'Popular Local Discovery' could be interesting, this item is categorized as an 'experience' and does not directly match the user's specific query for 'Pizza'. Given the lack of user history or preferences, it's a generic fallback that doesn't align with the current food-related search.",
-        "This 'City Favorite Pick' is a general 'experience' recommendation and does not align with the user's explicit query for 'Pizza'. Without any specific user preferences or history, this fallback option is less relevant than a direct category match for food."
+        "Starter match for pizza is a relevant match because it sits in the pizza category and carries metadata that overlaps with the current request for Pizza. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Pizza. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Pizza. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
       ],
       "thinking": [
-        "Think: interpret the query as 'recommend something based on my history' with target category 'Pizza'.",
-        "Think: user has 0 stored interactions, treated as cold start.",
+        "Think: interpret the query as 'Recommend Pizza based on my history' with target category 'Pizza'.",
+        "Think: user has 3 stored interactions, treated as warm.",
         "Plan: explicit persona preferences are not provided and conversation refinements are none yet.",
         "Plan: constraints considered before retrieval are ['none'] and attributes not provided.",
-        "Plan: top categories from history are ['unknown'].",
+        "Plan: top categories from history are ['Pizza', 'Food'].",
         "Think: retrieved 0 real candidates from ChromaDB.",
         "Think: top candidate is none.",
         "Think: supplemented with 3 cold-start candidates because real retrieval was sparse.",
-        "Plan: try live Chroma retrieval first, then use cold-start defaults only if real candidates are sparse."
+        "Plan: use Chroma user-history retrieval first, then semantic item retrieval to diversify candidates."
       ],
       "is_cold_start": false,
       "ndcg_at_10": 0.0,
@@ -438,25 +438,25 @@
         "city-favorite"
       ],
       "scores": [
-        10.0,
-        6.0,
-        5.0
+        9.62,
+        5.85,
+        5.49
       ],
       "explanations": [
-        "This 'Starter match for burgers' is a perfect fit as it directly aligns with your explicit query for 'Burgers'. Its category is 'burgers', ensuring it meets your immediate food preference.",
-        "The 'Popular Local Discovery' is a general 'experience' recommendation, suggesting something well-liked in the area. While not specific to 'Burgers', it offers a popular local option if you're open to exploring beyond your initial food search.",
-        "This 'City Favorite Pick' is another general 'experience' recommendation, highlighting a highly-rated local attraction or activity. Although it doesn't match your 'Burgers' query, it's a popular choice that could be interesting for a broader discovery on the Yelp platform."
+        "Starter match for burgers is a relevant match because it sits in the burgers category and carries metadata that overlaps with the current request for Burgers. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Burgers. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Burgers. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
       ],
       "thinking": [
-        "Think: interpret the query as 'recommend something based on my history' with target category 'Burgers'.",
-        "Think: user has 0 stored interactions, treated as cold start.",
+        "Think: interpret the query as 'Recommend Burgers based on my history' with target category 'Burgers'.",
+        "Think: user has 3 stored interactions, treated as warm.",
         "Plan: explicit persona preferences are not provided and conversation refinements are none yet.",
         "Plan: constraints considered before retrieval are ['none'] and attributes not provided.",
-        "Plan: top categories from history are ['unknown'].",
+        "Plan: top categories from history are ['Burgers', 'Active Life'].",
         "Think: retrieved 0 real candidates from ChromaDB.",
         "Think: top candidate is none.",
         "Think: supplemented with 3 cold-start candidates because real retrieval was sparse.",
-        "Plan: try live Chroma retrieval first, then use cold-start defaults only if real candidates are sparse."
+        "Plan: use Chroma user-history retrieval first, then semantic item retrieval to diversify candidates."
       ],
       "is_cold_start": false,
       "ndcg_at_10": 0.0,
@@ -477,25 +477,25 @@
         "city-favorite"
       ],
       "scores": [
-        10.0,
-        5.0,
-        4.0
+        9.62,
+        5.85,
+        5.49
       ],
       "explanations": [
-        "This 'Starter match for american (traditional)' is a direct and strong match for your current query context, which specifically requests 'American (Traditional)' cuisine. Since you're looking for this particular food category, this item is highly relevant as an initial suggestion.",
-        "While not directly matching your 'American (Traditional)' food query, the 'Popular Local Discovery' is a general 'experience' recommendation based on overall popularity. This could be a good option if you're open to exploring well-regarded local spots beyond just food, especially since your profile doesn't indicate other strong preferences.",
-        "The 'City Favorite Pick' is another general 'experience' recommendation, similar to the popular local discovery, that might appeal to a user without explicit preferences. Although it doesn't align with your specific 'American (Traditional)' food query, it offers a widely appreciated local option."
+        "Starter match for american (traditional) is a relevant match because it sits in the american (traditional) category and carries metadata that overlaps with the current request for American (Traditional). It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for American (Traditional). It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for American (Traditional). It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
       ],
       "thinking": [
-        "Think: interpret the query as 'recommend something based on my history' with target category 'American (Traditional)'.",
-        "Think: user has 0 stored interactions, treated as cold start.",
+        "Think: interpret the query as 'Recommend American (Traditional) based on my history' with target category 'American (Traditional)'.",
+        "Think: user has 8 stored interactions, treated as warm.",
         "Plan: explicit persona preferences are not provided and conversation refinements are none yet.",
         "Plan: constraints considered before retrieval are ['none'] and attributes not provided.",
-        "Plan: top categories from history are ['unknown'].",
+        "Plan: top categories from history are ['American (Traditional)', 'Food', 'Beer'].",
         "Think: retrieved 0 real candidates from ChromaDB.",
         "Think: top candidate is none.",
         "Think: supplemented with 3 cold-start candidates because real retrieval was sparse.",
-        "Plan: try live Chroma retrieval first, then use cold-start defaults only if real candidates are sparse."
+        "Plan: use Chroma user-history retrieval first, then semantic item retrieval to diversify candidates."
       ],
       "is_cold_start": false,
       "ndcg_at_10": 0.0,
@@ -519,25 +519,25 @@
         "city-favorite"
       ],
       "scores": [
-        9.0,
-        5.0,
-        4.0
+        9.62,
+        5.85,
+        5.49
       ],
       "explanations": [
-        "This 'Starter match for restaurants' is a perfect fit for the current query, which explicitly targets the 'Restaurants' category. Despite the user having an empty profile, this item directly addresses the immediate need for restaurant recommendations, making it highly relevant.",
-        "The 'Popular Local Discovery' is a general 'experience' recommendation that could be interesting for a user with an empty profile. However, it doesn't specifically align with the query's explicit request for 'Restaurants', making it a less direct match than a restaurant-specific item.",
-        "This 'City Favorite Pick' is another general 'experience' recommendation, similar to the popular local discovery. While it's a general fallback, it does not directly match the query context's specific interest in 'Restaurants', making it less targeted for the user's current search."
+        "Starter match for restaurants is a relevant match because it sits in the restaurants category and carries metadata that overlaps with the current request for Restaurants. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Restaurants. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Restaurants. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
       ],
       "thinking": [
-        "Think: interpret the query as 'recommend something based on my history' with target category 'Restaurants'.",
-        "Think: user has 0 stored interactions, treated as cold start.",
+        "Think: interpret the query as 'Recommend Restaurants based on my history' with target category 'Restaurants'.",
+        "Think: user has 23 stored interactions, treated as warm.",
         "Plan: explicit persona preferences are not provided and conversation refinements are none yet.",
         "Plan: constraints considered before retrieval are ['none'] and attributes not provided.",
-        "Plan: top categories from history are ['unknown'].",
+        "Plan: top categories from history are ['Restaurants', 'Food', 'Antiques'].",
         "Think: retrieved 0 real candidates from ChromaDB.",
         "Think: top candidate is none.",
         "Think: supplemented with 3 cold-start candidates because real retrieval was sparse.",
-        "Plan: try live Chroma retrieval first, then use cold-start defaults only if real candidates are sparse."
+        "Plan: use Chroma user-history retrieval first, then semantic item retrieval to diversify candidates."
       ],
       "is_cold_start": false,
       "ndcg_at_10": 0.0,
@@ -557,25 +557,25 @@
         "city-favorite"
       ],
       "scores": [
-        9.0,
-        4.0,
-        3.0
+        9.62,
+        5.85,
+        5.49
       ],
       "explanations": [
-        "This 'Starter match for mexican' is a strong recommendation because the user's query explicitly specified the 'Mexican' food category. It directly aligns with the user's immediate interest in Mexican cuisine, making it highly relevant for their current search.",
-        "The 'Popular Local Discovery' is a general 'experience' recommendation that serves as a fallback given the user's sparse profile. While it doesn't specifically match the 'Mexican' food category from the query, it offers a generally well-liked local option that might appeal to a user without defined preferences.",
-        "The 'City Favorite Pick' is another general 'experience' recommendation, similar to the popular local discovery, acting as a fallback for an unknown user profile. It provides a broadly appealing option, though it doesn't directly address the specific 'Mexican' food category requested in the query context."
+        "Starter match for mexican is a relevant match because it sits in the mexican category and carries metadata that overlaps with the current request for Mexican. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Mexican. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Mexican. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
       ],
       "thinking": [
-        "Think: interpret the query as 'recommend something based on my history' with target category 'Mexican'.",
-        "Think: user has 0 stored interactions, treated as cold start.",
+        "Think: interpret the query as 'Recommend Mexican based on my history' with target category 'Mexican'.",
+        "Think: user has 4 stored interactions, treated as warm.",
         "Plan: explicit persona preferences are not provided and conversation refinements are none yet.",
         "Plan: constraints considered before retrieval are ['none'] and attributes not provided.",
-        "Plan: top categories from history are ['unknown'].",
+        "Plan: top categories from history are ['Mexican', 'Seafood', 'Active Life'].",
         "Think: retrieved 0 real candidates from ChromaDB.",
         "Think: top candidate is none.",
         "Think: supplemented with 3 cold-start candidates because real retrieval was sparse.",
-        "Plan: try live Chroma retrieval first, then use cold-start defaults only if real candidates are sparse."
+        "Plan: use Chroma user-history retrieval first, then semantic item retrieval to diversify candidates."
       ],
       "is_cold_start": false,
       "ndcg_at_10": 0.0,
