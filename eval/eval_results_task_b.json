@@ -1,0 +1,585 @@
+{
+  "evaluation_metrics": {
+    "users_evaluated": 15,
+    "warm_users": 15,
+    "cold_users": 0,
+    "overall_ndcg_at_10": 0.0,
+    "overall_hit_rate_at_10": 0.0,
+    "warm_ndcg_at_10": 0.0,
+    "warm_hit_rate_at_10": 0.0,
+    "cold_ndcg_at_10": 0.0,
+    "cold_hit_rate_at_10": 0.0
+  },
+  "user_results": [
+    {
+      "user_id": "yelp_RreNy--tOmXMl1en0wiBOg",
+      "platform": "yelp",
+      "review_count": 3,
+      "held_out_items": [
+        "cPepkJeRMtHapc_b2Oe_dw"
+      ],
+      "recommended_items": [
+        "explicit-1",
+        "popular-local",
+        "city-favorite"
+      ],
+      "scores": [
+        9.62,
+        5.85,
+        5.49
+      ],
+      "explanations": [
+        "Starter match for wine bars is a relevant match because it sits in the wine bars category and carries metadata that overlaps with the current request for Wine Bars. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Wine Bars. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Wine Bars. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
+      ],
+      "thinking": [
+        "Think: interpret the query as 'recommend something based on my history' with target category 'Wine Bars'.",
+        "Think: user has 0 stored interactions, treated as cold start.",
+        "Plan: explicit persona preferences are not provided and conversation refinements are none yet.",
+        "Plan: constraints considered before retrieval are ['none'] and attributes not provided.",
+        "Plan: top categories from history are ['unknown'].",
+        "Think: retrieved 0 real candidates from ChromaDB.",
+        "Think: top candidate is none.",
+        "Think: supplemented with 3 cold-start candidates because real retrieval was sparse.",
+        "Plan: try live Chroma retrieval first, then use cold-start defaults only if real candidates are sparse."
+      ],
+      "is_cold_start": false,
+      "ndcg_at_10": 0.0,
+      "hit_rate_at_10": 0.0
+    },
+    {
+      "user_id": "yelp_3MpDvy5gEdsbZh9-p92dHg",
+      "platform": "yelp",
+      "review_count": 4,
+      "held_out_items": [
+        "720J1v3TX-J95cdTJbCpKA",
+        "AcbOk6rzLDEBqQCNQ3HCCQ"
+      ],
+      "recommended_items": [
+        "explicit-1",
+        "popular-local",
+        "city-favorite"
+      ],
+      "scores": [
+        9.62,
+        5.85,
+        5.49
+      ],
+      "explanations": [
+        "Starter match for hotels & travel is a relevant match because it sits in the hotels & travel category and carries metadata that overlaps with the current request for Hotels & Travel. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Hotels & Travel. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Hotels & Travel. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
+      ],
+      "thinking": [
+        "Think: interpret the query as 'recommend something based on my history' with target category 'Hotels & Travel'.",
+        "Think: user has 0 stored interactions, treated as cold start.",
+        "Plan: explicit persona preferences are not provided and conversation refinements are none yet.",
+        "Plan: constraints considered before retrieval are ['none'] and attributes not provided.",
+        "Plan: top categories from history are ['unknown'].",
+        "Think: retrieved 0 real candidates from ChromaDB.",
+        "Think: top candidate is none.",
+        "Think: supplemented with 3 cold-start candidates because real retrieval was sparse.",
+        "Plan: try live Chroma retrieval first, then use cold-start defaults only if real candidates are sparse."
+      ],
+      "is_cold_start": false,
+      "ndcg_at_10": 0.0,
+      "hit_rate_at_10": 0.0
+    },
+    {
+      "user_id": "yelp_ZGjgfSvjQK886kiTzLwfLQ",
+      "platform": "yelp",
+      "review_count": 4,
+      "held_out_items": [
+        "Oun4NN-u5yiHIxDqtJnxgA"
+      ],
+      "recommended_items": [
+        "explicit-1",
+        "popular-local",
+        "city-favorite"
+      ],
+      "scores": [
+        9.62,
+        5.85,
+        5.49
+      ],
+      "explanations": [
+        "Starter match for bars is a relevant match because it sits in the bars category and carries metadata that overlaps with the current request for Bars. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Bars. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Bars. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
+      ],
+      "thinking": [
+        "Think: interpret the query as 'recommend something based on my history' with target category 'Bars'.",
+        "Think: user has 0 stored interactions, treated as cold start.",
+        "Plan: explicit persona preferences are not provided and conversation refinements are none yet.",
+        "Plan: constraints considered before retrieval are ['none'] and attributes not provided.",
+        "Plan: top categories from history are ['unknown'].",
+        "Think: retrieved 0 real candidates from ChromaDB.",
+        "Think: top candidate is none.",
+        "Think: supplemented with 3 cold-start candidates because real retrieval was sparse.",
+        "Plan: try live Chroma retrieval first, then use cold-start defaults only if real candidates are sparse."
+      ],
+      "is_cold_start": false,
+      "ndcg_at_10": 0.0,
+      "hit_rate_at_10": 0.0
+    },
+    {
+      "user_id": "yelp_IKbjLnfBQtEyVzEu8CuOLg",
+      "platform": "yelp",
+      "review_count": 8,
+      "held_out_items": [
+        "Mha77MN_BYGB-w7DONZ5YA",
+        "R0HjMCL_m5wjBeUpOXqzdA",
+        "aYJjJMN8heS2PmkvsQzaZg"
+      ],
+      "recommended_items": [
+        "explicit-1",
+        "popular-local",
+        "city-favorite"
+      ],
+      "scores": [
+        9.62,
+        5.85,
+        5.49
+      ],
+      "explanations": [
+        "Starter match for pizza is a relevant match because it sits in the pizza category and carries metadata that overlaps with the current request for Pizza. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Pizza. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Pizza. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
+      ],
+      "thinking": [
+        "Think: interpret the query as 'recommend something based on my history' with target category 'Pizza'.",
+        "Think: user has 0 stored interactions, treated as cold start.",
+        "Plan: explicit persona preferences are not provided and conversation refinements are none yet.",
+        "Plan: constraints considered before retrieval are ['none'] and attributes not provided.",
+        "Plan: top categories from history are ['unknown'].",
+        "Think: retrieved 0 real candidates from ChromaDB.",
+        "Think: top candidate is none.",
+        "Think: supplemented with 3 cold-start candidates because real retrieval was sparse.",
+        "Plan: try live Chroma retrieval first, then use cold-start defaults only if real candidates are sparse."
+      ],
+      "is_cold_start": false,
+      "ndcg_at_10": 0.0,
+      "hit_rate_at_10": 0.0
+    },
+    {
+      "user_id": "yelp_enaHB1e956thdnafcHVAig",
+      "platform": "yelp",
+      "review_count": 4,
+      "held_out_items": [
+        "8-j10_I745ITrczbkfD-Pw",
+        "8usO-H5uFTzlISfGZN8rSg"
+      ],
+      "recommended_items": [
+        "explicit-1",
+        "popular-local",
+        "city-favorite"
+      ],
+      "scores": [
+        9.62,
+        5.85,
+        5.49
+      ],
+      "explanations": [
+        "Starter match for restaurants is a relevant match because it sits in the restaurants category and carries metadata that overlaps with the current request for Restaurants. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Restaurants. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Restaurants. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
+      ],
+      "thinking": [
+        "Think: interpret the query as 'recommend something based on my history' with target category 'Restaurants'.",
+        "Think: user has 0 stored interactions, treated as cold start.",
+        "Plan: explicit persona preferences are not provided and conversation refinements are none yet.",
+        "Plan: constraints considered before retrieval are ['none'] and attributes not provided.",
+        "Plan: top categories from history are ['unknown'].",
+        "Think: retrieved 0 real candidates from ChromaDB.",
+        "Think: top candidate is none.",
+        "Think: supplemented with 3 cold-start candidates because real retrieval was sparse.",
+        "Plan: try live Chroma retrieval first, then use cold-start defaults only if real candidates are sparse."
+      ],
+      "is_cold_start": false,
+      "ndcg_at_10": 0.0,
+      "hit_rate_at_10": 0.0
+    },
+    {
+      "user_id": "yelp_DBYhpb5hrAYgQjQaMhNYyQ",
+      "platform": "yelp",
+      "review_count": 4,
+      "held_out_items": [
+        "sr-5EY6bmp4jINhea06MjA",
+        "h4RaM9E8C0d20Uw-nLR5aw"
+      ],
+      "recommended_items": [
+        "explicit-1",
+        "popular-local",
+        "city-favorite"
+      ],
+      "scores": [
+        9.62,
+        5.85,
+        5.49
+      ],
+      "explanations": [
+        "Starter match for women's clothing is a relevant match because it sits in the women's clothing category and carries metadata that overlaps with the current request for Women's Clothing. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Women's Clothing. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Women's Clothing. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
+      ],
+      "thinking": [
+        "Think: interpret the query as 'recommend something based on my history' with target category 'Women's Clothing'.",
+        "Think: user has 0 stored interactions, treated as cold start.",
+        "Plan: explicit persona preferences are not provided and conversation refinements are none yet.",
+        "Plan: constraints considered before retrieval are ['none'] and attributes not provided.",
+        "Plan: top categories from history are ['unknown'].",
+        "Think: retrieved 0 real candidates from ChromaDB.",
+        "Think: top candidate is none.",
+        "Think: supplemented with 3 cold-start candidates because real retrieval was sparse.",
+        "Plan: try live Chroma retrieval first, then use cold-start defaults only if real candidates are sparse."
+      ],
+      "is_cold_start": false,
+      "ndcg_at_10": 0.0,
+      "hit_rate_at_10": 0.0
+    },
+    {
+      "user_id": "yelp_NUtIAX-ygn474tDg5nmesg",
+      "platform": "yelp",
+      "review_count": 6,
+      "held_out_items": [
+        "u7_3L1NBWgxhBM_B-cmmnA",
+        "uIZwBkvWicqyWraXvYOipw"
+      ],
+      "recommended_items": [
+        "explicit-1",
+        "popular-local",
+        "city-favorite"
+      ],
+      "scores": [
+        9.62,
+        5.85,
+        5.49
+      ],
+      "explanations": [
+        "Starter match for sandwiches is a relevant match because it sits in the sandwiches category and carries metadata that overlaps with the current request for Sandwiches. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Sandwiches. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Sandwiches. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
+      ],
+      "thinking": [
+        "Think: interpret the query as 'recommend something based on my history' with target category 'Sandwiches'.",
+        "Think: user has 0 stored interactions, treated as cold start.",
+        "Plan: explicit persona preferences are not provided and conversation refinements are none yet.",
+        "Plan: constraints considered before retrieval are ['none'] and attributes not provided.",
+        "Plan: top categories from history are ['unknown'].",
+        "Think: retrieved 0 real candidates from ChromaDB.",
+        "Think: top candidate is none.",
+        "Think: supplemented with 3 cold-start candidates because real retrieval was sparse.",
+        "Plan: try live Chroma retrieval first, then use cold-start defaults only if real candidates are sparse."
+      ],
+      "is_cold_start": false,
+      "ndcg_at_10": 0.0,
+      "hit_rate_at_10": 0.0
+    },
+    {
+      "user_id": "yelp_uAu772KpSkb-tPFgZmU-lA",
+      "platform": "yelp",
+      "review_count": 5,
+      "held_out_items": [
+        "kz8OeP88ZYjDBWb0LePJ3A",
+        "LnZvGYbqozanOSevcftnrw"
+      ],
+      "recommended_items": [
+        "explicit-1",
+        "popular-local",
+        "city-favorite"
+      ],
+      "scores": [
+        9.62,
+        5.85,
+        5.49
+      ],
+      "explanations": [
+        "Starter match for event planning & services is a relevant match because it sits in the event planning & services category and carries metadata that overlaps with the current request for Event Planning & Services. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Event Planning & Services. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Event Planning & Services. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
+      ],
+      "thinking": [
+        "Think: interpret the query as 'recommend something based on my history' with target category 'Event Planning & Services'.",
+        "Think: user has 0 stored interactions, treated as cold start.",
+        "Plan: explicit persona preferences are not provided and conversation refinements are none yet.",
+        "Plan: constraints considered before retrieval are ['none'] and attributes not provided.",
+        "Plan: top categories from history are ['unknown'].",
+        "Think: retrieved 0 real candidates from ChromaDB.",
+        "Think: top candidate is none.",
+        "Think: supplemented with 3 cold-start candidates because real retrieval was sparse.",
+        "Plan: try live Chroma retrieval first, then use cold-start defaults only if real candidates are sparse."
+      ],
+      "is_cold_start": false,
+      "ndcg_at_10": 0.0,
+      "hit_rate_at_10": 0.0
+    },
+    {
+      "user_id": "yelp_Zs8Zk3sgh5JxRmoZW4PJcg",
+      "platform": "yelp",
+      "review_count": 3,
+      "held_out_items": [
+        "3ZynJ94VpIdDlaArmEp2Rg"
+      ],
+      "recommended_items": [
+        "explicit-1",
+        "popular-local",
+        "city-favorite"
+      ],
+      "scores": [
+        9.62,
+        5.85,
+        5.49
+      ],
+      "explanations": [
+        "Starter match for arts & entertainment is a relevant match because it sits in the arts & entertainment category and carries metadata that overlaps with the current request for Arts & Entertainment. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Arts & Entertainment. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Arts & Entertainment. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
+      ],
+      "thinking": [
+        "Think: interpret the query as 'recommend something based on my history' with target category 'Arts & Entertainment'.",
+        "Think: user has 0 stored interactions, treated as cold start.",
+        "Plan: explicit persona preferences are not provided and conversation refinements are none yet.",
+        "Plan: constraints considered before retrieval are ['none'] and attributes not provided.",
+        "Plan: top categories from history are ['unknown'].",
+        "Think: retrieved 0 real candidates from ChromaDB.",
+        "Think: top candidate is none.",
+        "Think: supplemented with 3 cold-start candidates because real retrieval was sparse.",
+        "Plan: try live Chroma retrieval first, then use cold-start defaults only if real candidates are sparse."
+      ],
+      "is_cold_start": false,
+      "ndcg_at_10": 0.0,
+      "hit_rate_at_10": 0.0
+    },
+    {
+      "user_id": "yelp_pYXeL0RCqus2IfhthYCOyA",
+      "platform": "yelp",
+      "review_count": 3,
+      "held_out_items": [
+        "AKFahOtdDQA7NVXZyDajCA"
+      ],
+      "recommended_items": [
+        "explicit-1",
+        "popular-local",
+        "city-favorite"
+      ],
+      "scores": [
+        9.62,
+        5.85,
+        5.49
+      ],
+      "explanations": [
+        "Starter match for cheesesteaks is a relevant match because it sits in the cheesesteaks category and carries metadata that overlaps with the current request for Cheesesteaks. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Cheesesteaks. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Cheesesteaks. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
+      ],
+      "thinking": [
+        "Think: interpret the query as 'recommend something based on my history' with target category 'Cheesesteaks'.",
+        "Think: user has 0 stored interactions, treated as cold start.",
+        "Plan: explicit persona preferences are not provided and conversation refinements are none yet.",
+        "Plan: constraints considered before retrieval are ['none'] and attributes not provided.",
+        "Plan: top categories from history are ['unknown'].",
+        "Think: retrieved 0 real candidates from ChromaDB.",
+        "Think: top candidate is none.",
+        "Think: supplemented with 3 cold-start candidates because real retrieval was sparse.",
+        "Plan: try live Chroma retrieval first, then use cold-start defaults only if real candidates are sparse."
+      ],
+      "is_cold_start": false,
+      "ndcg_at_10": 0.0,
+      "hit_rate_at_10": 0.0
+    },
+    {
+      "user_id": "yelp_EfG0nInFMbiO9Hy7A6B2cQ",
+      "platform": "yelp",
+      "review_count": 3,
+      "held_out_items": [
+        "VravcZnsQskdqMp9dWS3pg"
+      ],
+      "recommended_items": [
+        "explicit-1",
+        "popular-local",
+        "city-favorite"
+      ],
+      "scores": [
+        9.62,
+        5.85,
+        5.49
+      ],
+      "explanations": [
+        "Starter match for pizza is a relevant match because it sits in the pizza category and carries metadata that overlaps with the current request for Pizza. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Pizza. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Pizza. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
+      ],
+      "thinking": [
+        "Think: interpret the query as 'recommend something based on my history' with target category 'Pizza'.",
+        "Think: user has 0 stored interactions, treated as cold start.",
+        "Plan: explicit persona preferences are not provided and conversation refinements are none yet.",
+        "Plan: constraints considered before retrieval are ['none'] and attributes not provided.",
+        "Plan: top categories from history are ['unknown'].",
+        "Think: retrieved 0 real candidates from ChromaDB.",
+        "Think: top candidate is none.",
+        "Think: supplemented with 3 cold-start candidates because real retrieval was sparse.",
+        "Plan: try live Chroma retrieval first, then use cold-start defaults only if real candidates are sparse."
+      ],
+      "is_cold_start": false,
+      "ndcg_at_10": 0.0,
+      "hit_rate_at_10": 0.0
+    },
+    {
+      "user_id": "yelp_Zp1o52IRl92dunmsfiT96g",
+      "platform": "yelp",
+      "review_count": 3,
+      "held_out_items": [
+        "lo2VbA7Lwzu3i23pQpmzlw"
+      ],
+      "recommended_items": [
+        "explicit-1",
+        "popular-local",
+        "city-favorite"
+      ],
+      "scores": [
+        9.62,
+        5.85,
+        5.49
+      ],
+      "explanations": [
+        "Starter match for burgers is a relevant match because it sits in the burgers category and carries metadata that overlaps with the current request for Burgers. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Burgers. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Burgers. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
+      ],
+      "thinking": [
+        "Think: interpret the query as 'recommend something based on my history' with target category 'Burgers'.",
+        "Think: user has 0 stored interactions, treated as cold start.",
+        "Plan: explicit persona preferences are not provided and conversation refinements are none yet.",
+        "Plan: constraints considered before retrieval are ['none'] and attributes not provided.",
+        "Plan: top categories from history are ['unknown'].",
+        "Think: retrieved 0 real candidates from ChromaDB.",
+        "Think: top candidate is none.",
+        "Think: supplemented with 3 cold-start candidates because real retrieval was sparse.",
+        "Plan: try live Chroma retrieval first, then use cold-start defaults only if real candidates are sparse."
+      ],
+      "is_cold_start": false,
+      "ndcg_at_10": 0.0,
+      "hit_rate_at_10": 0.0
+    },
+    {
+      "user_id": "yelp_Cvi8nZTwDVaQkqmmgQwQMw",
+      "platform": "yelp",
+      "review_count": 8,
+      "held_out_items": [
+        "mmBwAe9q062vKWanRfoagQ",
+        "skN2XhKXlcjf53uIwzAedw",
+        "mbglgx3nbRRPKxh0SxDjNQ"
+      ],
+      "recommended_items": [
+        "explicit-1",
+        "popular-local",
+        "city-favorite"
+      ],
+      "scores": [
+        9.62,
+        5.85,
+        5.49
+      ],
+      "explanations": [
+        "Starter match for american (traditional) is a relevant match because it sits in the american (traditional) category and carries metadata that overlaps with the current request for American (Traditional). It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for American (Traditional). It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for American (Traditional). It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
+      ],
+      "thinking": [
+        "Think: interpret the query as 'recommend something based on my history' with target category 'American (Traditional)'.",
+        "Think: user has 0 stored interactions, treated as cold start.",
+        "Plan: explicit persona preferences are not provided and conversation refinements are none yet.",
+        "Plan: constraints considered before retrieval are ['none'] and attributes not provided.",
+        "Plan: top categories from history are ['unknown'].",
+        "Think: retrieved 0 real candidates from ChromaDB.",
+        "Think: top candidate is none.",
+        "Think: supplemented with 3 cold-start candidates because real retrieval was sparse.",
+        "Plan: try live Chroma retrieval first, then use cold-start defaults only if real candidates are sparse."
+      ],
+      "is_cold_start": false,
+      "ndcg_at_10": 0.0,
+      "hit_rate_at_10": 0.0
+    },
+    {
+      "user_id": "yelp_0Igx-a1wAstiBDerGxXk2A",
+      "platform": "yelp",
+      "review_count": 23,
+      "held_out_items": [
+        "2kOGFDJ9v4T9AzuKWhwl2g",
+        "jD99J_5nco5bUTlhMR1fsA",
+        "UVE_f01HDCnkyQVhIApUrQ",
+        "0yGH62WGQy_W3JoR6L5Kew",
+        "PzhPMkaNYiKDTHoTG0r8rw",
+        "b31BKAJuyGX6GHV0J9T6hA"
+      ],
+      "recommended_items": [
+        "explicit-1",
+        "popular-local",
+        "city-favorite"
+      ],
+      "scores": [
+        9.62,
+        5.85,
+        5.49
+      ],
+      "explanations": [
+        "Starter match for restaurants is a relevant match because it sits in the restaurants category and carries metadata that overlaps with the current request for Restaurants. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Restaurants. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Restaurants. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
+      ],
+      "thinking": [
+        "Think: interpret the query as 'recommend something based on my history' with target category 'Restaurants'.",
+        "Think: user has 0 stored interactions, treated as cold start.",
+        "Plan: explicit persona preferences are not provided and conversation refinements are none yet.",
+        "Plan: constraints considered before retrieval are ['none'] and attributes not provided.",
+        "Plan: top categories from history are ['unknown'].",
+        "Think: retrieved 0 real candidates from ChromaDB.",
+        "Think: top candidate is none.",
+        "Think: supplemented with 3 cold-start candidates because real retrieval was sparse.",
+        "Plan: try live Chroma retrieval first, then use cold-start defaults only if real candidates are sparse."
+      ],
+      "is_cold_start": false,
+      "ndcg_at_10": 0.0,
+      "hit_rate_at_10": 0.0
+    },
+    {
+      "user_id": "yelp_x-LrGPXN7WFX15Qk9B6_YQ",
+      "platform": "yelp",
+      "review_count": 4,
+      "held_out_items": [
+        "LnZvGYbqozanOSevcftnrw",
+        "hoYHhfn4w0mVjI60eHDHzA"
+      ],
+      "recommended_items": [
+        "explicit-1",
+        "popular-local",
+        "city-favorite"
+      ],
+      "scores": [
+        9.62,
+        5.85,
+        5.49
+      ],
+      "explanations": [
+        "Starter match for mexican is a relevant match because it sits in the mexican category and carries metadata that overlaps with the current request for Mexican. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "Popular Local Discovery is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Mexican. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation.",
+        "City Favorite Pick is a relevant match because it sits in the experience category and carries metadata that overlaps with the current request for Mexican. It remains a heuristic fallback because the LLM ranking step did not return a usable explanation."
+      ],
+      "thinking": [
+        "Think: interpret the query as 'recommend something based on my history' with target category 'Mexican'.",
+        "Think: user has 0 stored interactions, treated as cold start.",
+        "Plan: explicit persona preferences are not provided and conversation refinements are none yet.",
+        "Plan: constraints considered before retrieval are ['none'] and attributes not provided.",
+        "Plan: top categories from history are ['unknown'].",
+        "Think: retrieved 0 real candidates from ChromaDB.",
+        "Think: top candidate is none.",
+        "Think: supplemented with 3 cold-start candidates because real retrieval was sparse.",
+        "Plan: try live Chroma retrieval first, then use cold-start defaults only if real candidates are sparse."
+      ],
+      "is_cold_start": false,
+      "ndcg_at_10": 0.0,
+      "hit_rate_at_10": 0.0
+    }
+  ]
+}

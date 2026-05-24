@@ -1,0 +1,15 @@
+TASK B EVALUATION RESULTS
+========================================
+Users evaluated: 15 (15 warm, 0 cold)
+
+Overall:
+  NDCG@10:      0.0000
+  Hit Rate@10:  0.0000
+
+Warm Users (n=15):
+  NDCG@10:      0.0000
+  Hit Rate@10:  0.0000
+
+Cold-Start Users (n=0):
+  NDCG@10:      0.0000
+  Hit Rate@10:  0.0000
