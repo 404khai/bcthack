@@ -286,23 +286,24 @@ def extract_recommended_items(payload: dict[str, Any]) -> tuple[list[str], list[
 
 def hit_rate_at_k(recommended: list[str], relevant: list[str], k: int = 10) -> float:
     """Computes Hit Rate@K with normalized ID matching."""
-    recommended_set = {normalize_id(item_id) for item_id in recommended[:k]}
-    relevant_set = {normalize_id(item_id) for item_id in relevant}
-    return 1.0 if recommended_set & relevant_set else 0.0
+    recommended_normalized = {normalize_id(item_id) for item_id in recommended[:k]}
+    relevant_normalized = {normalize_id(item_id) for item_id in relevant}
+    hits = len(recommended_normalized & relevant_normalized)
+    return 1.0 if hits > 0 else 0.0
 
 
 def ndcg_at_k(recommended: list[str], relevant: list[str], k: int = 10) -> float:
     """Computes NDCG@K with normalized ID matching."""
-    relevant_set = {normalize_id(item_id) for item_id in relevant}
-    if not relevant_set:
+    relevant_normalized = {normalize_id(item_id) for item_id in relevant}
+    if not relevant_normalized:
         return 0.0
 
     dcg = 0.0
     for index, item_id in enumerate(recommended[:k]):
-        if normalize_id(item_id) in relevant_set:
+        if normalize_id(item_id) in relevant_normalized:
             dcg += 1.0 / math.log2(index + 2)
 
-    ideal_hits = min(len(relevant_set), k)
+    ideal_hits = min(len(relevant_normalized), k)
     idcg = sum(1.0 / math.log2(index + 2) for index in range(ideal_hits))
     return dcg / idcg if idcg > 0 else 0.0
 
