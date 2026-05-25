@@ -155,7 +155,7 @@ def check_connection(base_url: str) -> None:
 
 def get_collections() -> tuple[Any, Any]:
     """Creates the Chroma client and returns users and reviews collections."""
-    chroma_path = os.getenv("CHROMA_PERSIST_DIR", "./chroma_data")
+    chroma_path = os.getenv("CHROMA_PERSIST_DIR", "./chroma_db")
     client = chromadb.PersistentClient(path=chroma_path)
     return client.get_collection("users"), client.get_collection("reviews")
 
@@ -194,7 +194,8 @@ def choose_test_users(limit: int) -> list[TestUser]:
         strict=False,
     ):
         meta = metadata or {}
-        user_id = str(meta.get("user_id") or collection_id).strip()
+        # Use the exact ChromaDB document ID because the service resolves warm users by that ID.
+        user_id = str(collection_id).strip()
         platform = str(meta.get("platform") or "yelp").strip() or "yelp"
         review_count = safe_int(meta.get("review_count"), 0)
         held_out_items = get_held_out_items(user_id, reviews_col)
@@ -242,7 +243,7 @@ def resolve_category(metadata: dict[str, Any]) -> str:
 
 def build_payload(user: TestUser, top_k: int = 10) -> dict[str, Any]:
     """Builds the confirmed Task B request payload shape."""
-    category = resolve_category(user.metadata)
+    first_category = resolve_category(user.metadata)
     return {
         "user_persona": {
             "user_id": user.user_id,
@@ -251,9 +252,9 @@ def build_payload(user: TestUser, top_k: int = 10) -> dict[str, Any]:
             "history": [],
             "persona_text": "",
         },
-        "query": "recommend something based on my history",
+        "query": f"Recommend {first_category} based on my history",
         "request_context": {
-            "category": category,
+            "category": first_category,
             "target_domain": "food",
             "item_attributes": {},
             "constraints": [],
@@ -351,6 +352,34 @@ def evaluate_user(base_url: str, user: TestUser) -> RecommendationResult | None:
     )
 
 
+def run_preflight_check(base_url: str, user: TestUser) -> None:
+    """Logs a single probe request to show whether the service treats the user as warm or cold."""
+    logger.info("Pre-flight: testing user %s", user.user_id)
+    response = request_with_retry(
+        "post",
+        f"{base_url}/recommend",
+        json=build_payload(user),
+        timeout=DEFAULT_TIMEOUT,
+    )
+
+    if not response.ok:
+        logger.warning(
+            "Pre-flight request failed for user %s with status %s: %s",
+            user.user_id,
+            response.status_code,
+            response.text[:500],
+        )
+        return
+
+    try:
+        payload = response.json()
+    except ValueError:
+        logger.warning("Pre-flight response for user %s was not valid JSON", user.user_id)
+        return
+
+    logger.info("Pre-flight thinking: %s", payload.get("thinking", [])[:2])
+
+
 def average(values: list[float]) -> float:
     """Returns the mean of a numeric list or 0.0 when empty."""
     return sum(values) / len(values) if values else 0.0
@@ -445,6 +474,7 @@ def main() -> None:
         sys.exit(1)
 
     logger.info("Loaded %s real Task B users from ChromaDB", len(users))
+    run_preflight_check(args.base_url, users[0])
     results: list[RecommendationResult] = []
 
     for index, user in enumerate(users, start=1):

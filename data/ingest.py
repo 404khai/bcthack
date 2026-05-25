@@ -46,7 +46,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--chroma-dir",
         type=Path,
-        default=Path(getenv("CHROMA_PERSIST_DIR", "chroma_data")),
+        default=Path(getenv("CHROMA_PERSIST_DIR", "chroma_db")),
         help="Directory for ChromaDB persistence",
     )
     parser.add_argument(

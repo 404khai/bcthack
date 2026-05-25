@@ -8,6 +8,7 @@ __pycache__/
 venv/
 env/
 ENV/
+debug/
 
 # Environment and local secrets
 .env
@@ -30,7 +31,10 @@ dist/
 pip-wheel-metadata/
 
 # Local data and runtime artifacts
+# Canonical Chroma persistence path
 chroma_db/
+# Legacy local Chroma path kept ignored to avoid accidental commits
+chroma_data/
 *.log
 
 # IDE and OS files
@@ -47,4 +51,3 @@ data/sample/*.jsonl
 data/sample/test_fixtures/
 goodreads_data/
 yelp_data/
-chroma_data/

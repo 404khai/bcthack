@@ -163,7 +163,7 @@ def check_connection(base_url: str) -> None:
 
 def get_collections() -> tuple[Any, Any]:
     """Creates a Chroma client and returns the reviews and items collections."""
-    chroma_path = os.getenv("CHROMA_PERSIST_DIR", "./chroma_data")
+    chroma_path = os.getenv("CHROMA_PERSIST_DIR", "./chroma_db")
     client = chromadb.PersistentClient(path=chroma_path)
     return client.get_collection("reviews"), client.get_collection("items")
 
