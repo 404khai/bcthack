@@ -48,7 +48,7 @@ COPY --from=builder /opt/venv /opt/venv
 # Copy application code
 COPY shared/ /app/shared/
 COPY task_a/ /app/task_a/
-COPY chroma_db/ /app/chroma_db/
+RUN mkdir -p /app/chroma_db
 
 # Set ownership to non-root user
 RUN chown -R appuser:appuser /app
